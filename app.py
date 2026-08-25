@@ -7,6 +7,7 @@ import re
 from spond import spond
 import streamlit as st
 import streamlit.components.v1 as components
+from zoneinfo import ZoneInfo
 
 # Relative path for Streamlit Cloud deployment
 LOGO_IMAGE_PATH = Path("HRFC_CREST.png")
@@ -191,7 +192,8 @@ async def fetch_spond_data():
 
 
 def render_card(results):
-    timestamp = datetime.now().strftime("As at %d %b %Y, %H:%M")
+    uk_now = datetime.now(ZoneInfo("Europe/London"))
+    timestamp = uk_now.strftime("As at %d %b %Y, %H:%M")
 
     logo_img_tag = ""
     if LOGO_IMAGE_PATH.exists():
