@@ -13,20 +13,20 @@ from zoneinfo import ZoneInfo
 LOGO_IMAGE_PATH = Path("HRFC_CREST.png")
 
 TARGET_SPECS = [
-    {"label": "HRFC U6", "group_name": "HRFC U6", "category": "minis", "lead": "MATT"},
-    {"label": "HRFC U7", "group_name": "HRFC U7", "category": "minis", "lead": "NICK"},
-    {"label": "HRFC U8", "group_name": "HRFC U8", "category": "minis", "lead": "SARAH"},
-    {"label": "HRFC U9", "group_name": "HRFC U9", "category": "minis", "lead": "DEBBIE"},
-    {"label": "HRFC U10", "group_name": "HRFC U10", "category": "minis", "lead": "STEVE"},
-    {"label": "HRFC U11", "group_name": "HRFC U11", "category": "minis", "lead": "JEN"},
-    {"label": "HRFC U12", "group_name": "HRFC U12", "category": "minis", "lead": "HARRY"},
-    {"label": "HRFC U13", "group_name": "HRFC U13", "category": "juniors_youth", "lead": "COXY"},
-    {"label": "HRFC U14", "group_name": "HRFC U14", "category": "juniors_youth", "lead": "JONNY"},
-    {"label": "HRFC HURRICANES", "group_name": "HRFC HURRICANES", "category": "juniors_youth", "lead": "SIMON"},
-    {"label": "HRFC COLTS", "group_name": "HRFC COLTS", "category": "juniors_youth", "lead": "STEFAN"},
-    {"label": "WARRIORS U12", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U12", "category": "juniors_youth", "lead": "HELEN"},
-    {"label": "WARRIORS U14", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U14", "category": "juniors_youth", "lead": "JO"},
-    {"label": "WARRIORS U16", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U16", "category": "juniors_youth", "lead": "HELEN"},
+    {"label": "HRFC U6", "group_name": "HRFC U6", "category": "minis", "lead": "TBC"},
+    {"label": "HRFC U7", "group_name": "HRFC U7", "category": "minis", "lead": "TBC"},
+    {"label": "HRFC U8", "group_name": "HRFC U8", "category": "minis", "lead": "TBC"},
+    {"label": "HRFC U9", "group_name": "HRFC U9", "category": "minis", "lead": "TBC"},
+    {"label": "HRFC U10", "group_name": "HRFC U10", "category": "minis", "lead": "TBC"},
+    {"label": "HRFC U11", "group_name": "HRFC U11", "category": "minis", "lead": "TBC"},
+    {"label": "HRFC U12", "group_name": "HRFC U12", "category": "minis", "lead": "TBC"},
+    {"label": "HRFC U13", "group_name": "HRFC U13", "category": "juniors_youth", "lead": "TBC"},
+    {"label": "HRFC U14", "group_name": "HRFC U14", "category": "juniors_youth", "lead": "TBC"},
+    {"label": "HRFC HURRICANES", "group_name": "HRFC HURRICANES", "category": "juniors_youth", "lead": "Matt Allard"},
+    {"label": "HRFC COLTS", "group_name": "HRFC COLTS", "category": "juniors_youth", "lead": "TBC"},
+    {"label": "WARRIORS U12", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U12", "category": "juniors_youth", "lead": "TBC"},
+    {"label": "WARRIORS U14", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U14", "category": "juniors_youth", "lead": "TBC"},
+    {"label": "WARRIORS U16", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U16", "category": "juniors_youth", "lead": "Matt Allard"},
 ]
 
 st.set_page_config(page_title="HRFC Spond Rates", layout="wide")
@@ -153,6 +153,7 @@ async def _fetch_spond_data_async():
                     "label": label,
                     "lead": lead,
                     "category": category,
+                    "event_time": None,
                     "acc": 0,
                     "dec": 0,
                     "una": 0,
@@ -179,6 +180,7 @@ async def _fetch_spond_data_async():
                     "label": label,
                     "lead": lead,
                     "category": category,
+                    "event_time": None,
                     "acc": 0,
                     "dec": 0,
                     "una": 0,
@@ -187,6 +189,7 @@ async def _fetch_spond_data_async():
                 })
                 continue
 
+            ev_time = parse_utc_timestamp(next_ev.get("startTimestamp"))
             ev_id = next_ev.get("id")
             detailed_ev = next_ev
             if ev_id:
@@ -204,6 +207,7 @@ async def _fetch_spond_data_async():
                 "label": label,
                 "lead": lead,
                 "category": category,
+                "event_time": ev_time,
                 "acc": stats["acc"],
                 "dec": stats["dec"],
                 "una": stats["una"],
@@ -225,8 +229,18 @@ def load_all_spond_data():
 
 
 def render_card(results, subtitle_suffix=""):
-    uk_now = datetime.now(ZoneInfo("Europe/London"))
+    uk_tz = ZoneInfo("Europe/London")
+    uk_now = datetime.now(uk_tz)
     timestamp = uk_now.strftime("As at %d %b %Y, %H:%M")
+
+    # Determine earliest upcoming session date for dynamic title
+    upcoming_dates = [r["event_time"] for r in results if r.get("event_time") is not None]
+    if upcoming_dates:
+        earliest_dt = min(upcoming_dates).astimezone(uk_tz)
+        date_prefix = earliest_dt.strftime("%a %d-%b").upper()
+        card_title = f"{date_prefix} - HRFC TEAM SPOND RESPONSE RATES"
+    else:
+        card_title = "HRFC TEAM SPOND RESPONSE RATES"
 
     logo_img_tag = ""
     if LOGO_IMAGE_PATH.exists():
@@ -281,7 +295,7 @@ def render_card(results, subtitle_suffix=""):
         f'<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 32px; margin-bottom: 16px;">'
         f'<div>'
         f'<div style="color: #FFE602; font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">'
-        f'HRFC TEAM SPOND RESPONSE RATES'
+        f'{card_title}'
         f'</div>'
         f'<div style="color: #F3C5CE; font-size: 11px; font-weight: 500; margin-top: 4px;">'
         f'{subtitle}'
@@ -315,7 +329,7 @@ def render_card(results, subtitle_suffix=""):
 top_col1, top_col2 = st.columns([2, 8])
 
 with top_col1:
-    if st.button("🔄 Force Refresh Data"):
+    if st.button("🔄 Refresh Data"):
         st.cache_data.clear()
         st.rerun()
 
