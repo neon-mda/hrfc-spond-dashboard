@@ -13,20 +13,20 @@ from zoneinfo import ZoneInfo
 LOGO_IMAGE_PATH = Path("HRFC_CREST.png")
 
 TARGET_SPECS = [
-    {"label": "HRFC U6", "group_name": "HRFC U6", "category": "minis"},
-    {"label": "HRFC U7", "group_name": "HRFC U7", "category": "minis"},
-    {"label": "HRFC U8", "group_name": "HRFC U8", "category": "minis"},
-    {"label": "HRFC U9", "group_name": "HRFC U9", "category": "minis"},
-    {"label": "HRFC U10", "group_name": "HRFC U10", "category": "minis"},
-    {"label": "HRFC U11", "group_name": "HRFC U11", "category": "minis"},
-    {"label": "HRFC U12", "group_name": "HRFC U12", "category": "minis"},
-    {"label": "HRFC U13", "group_name": "HRFC U13", "category": "juniors_youth"},
-    {"label": "HRFC U14", "group_name": "HRFC U14", "category": "juniors_youth"},
-    {"label": "HRFC HURRICANES", "group_name": "HRFC HURRICANES", "category": "juniors_youth"},
-    {"label": "HRFC COLTS", "group_name": "HRFC COLTS", "category": "juniors_youth"},
-    {"label": "WARRIORS U12", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U12", "category": "minis"},
-    {"label": "WARRIORS U14", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U14", "category": "juniors_youth"},
-    {"label": "WARRIORS U16", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U16", "category": "juniors_youth"},
+    {"label": "HRFC U6", "group_name": "HRFC U6", "category": "minis", "lead": "MATT"},
+    {"label": "HRFC U7", "group_name": "HRFC U7", "category": "minis", "lead": "NICK"},
+    {"label": "HRFC U8", "group_name": "HRFC U8", "category": "minis", "lead": "SARAH"},
+    {"label": "HRFC U9", "group_name": "HRFC U9", "category": "minis", "lead": "DEBBIE"},
+    {"label": "HRFC U10", "group_name": "HRFC U10", "category": "minis", "lead": "STEVE"},
+    {"label": "HRFC U11", "group_name": "HRFC U11", "category": "minis", "lead": "JEN"},
+    {"label": "HRFC U12", "group_name": "HRFC U12", "category": "minis", "lead": "HARRY"},
+    {"label": "HRFC U13", "group_name": "HRFC U13", "category": "juniors_youth", "lead": "COXY"},
+    {"label": "HRFC U14", "group_name": "HRFC U14", "category": "juniors_youth", "lead": "JONNY"},
+    {"label": "HRFC HURRICANES", "group_name": "HRFC HURRICANES", "category": "juniors_youth", "lead": "SIMON"},
+    {"label": "HRFC COLTS", "group_name": "HRFC COLTS", "category": "juniors_youth", "lead": "STEFAN"},
+    {"label": "WARRIORS U12", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U12", "category": "juniors_youth", "lead": "HELEN"},
+    {"label": "WARRIORS U14", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U14", "category": "juniors_youth", "lead": "JO"},
+    {"label": "WARRIORS U16", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U16", "category": "juniors_youth", "lead": "HELEN"},
 ]
 
 st.set_page_config(page_title="HRFC Spond Rates", layout="wide")
@@ -133,6 +133,7 @@ async def _fetch_spond_data_async():
         for spec in TARGET_SPECS:
             label = spec["label"]
             category = spec["category"]
+            lead = spec.get("lead", "")
             group_id, subgroup_id = None, None
 
             if "parent_group" in spec:
@@ -150,6 +151,7 @@ async def _fetch_spond_data_async():
             if not group_id:
                 results.append({
                     "label": label,
+                    "lead": lead,
                     "category": category,
                     "acc": 0,
                     "dec": 0,
@@ -175,6 +177,7 @@ async def _fetch_spond_data_async():
             if not next_ev:
                 results.append({
                     "label": label,
+                    "lead": lead,
                     "category": category,
                     "acc": 0,
                     "dec": 0,
@@ -199,6 +202,7 @@ async def _fetch_spond_data_async():
             stats = calculate_attendance(detailed_ev)
             results.append({
                 "label": label,
+                "lead": lead,
                 "category": category,
                 "acc": stats["acc"],
                 "dec": stats["dec"],
@@ -238,6 +242,7 @@ def render_card(results, subtitle_suffix=""):
 
         rows_html += (
             f'<tr style="background-color: {bg_colour}; border: none; white-space: nowrap;">'
+            f'<td style="padding: 8px 18px; text-align: left; font-weight: 600; color: #F3C5CE; font-size: 14px;">{r["lead"]}</td>'
             f'<td style="padding: 8px 18px; text-align: left; font-weight: 700; color: #FFFFFF; font-size: 14px;">{r["label"]}</td>'
             f'<td style="padding: 8px 18px; text-align: center; color: #FFFFFF; font-size: 14px;">{r["acc"]}</td>'
             f'<td style="padding: 8px 18px; text-align: center; color: #FFFFFF; font-size: 14px;">{r["dec"]}</td>'
@@ -287,6 +292,7 @@ def render_card(results, subtitle_suffix=""):
         f'<table style="width: 100%; border-collapse: collapse;">'
         f'<thead>'
         f'<tr style="border: none; white-space: nowrap;">'
+        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: left; padding: 8px 18px;">LEAD</th>'
         f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: left; padding: 8px 18px;">TEAM</th>'
         f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: center; padding: 8px 18px;">ACCEPTED</th>'
         f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: center; padding: 8px 18px;">DECLINED</th>'
