@@ -13,14 +13,20 @@ from zoneinfo import ZoneInfo
 LOGO_IMAGE_PATH = Path("HRFC_CREST.png")
 
 TARGET_SPECS = [
-    {"label": "WARRIORS U12", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U12"},
-    {"label": "WARRIORS U14", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U14"},
-    {"label": "WARRIORS U16", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U16"},
+    {"label": "HRFC U6", "group_name": "HRFC U6"},
+    {"label": "HRFC U7", "group_name": "HRFC U7"},
+    {"label": "HRFC U8", "group_name": "HRFC U8"},
+    {"label": "HRFC U9", "group_name": "HRFC U9"},
+    {"label": "HRFC U10", "group_name": "HRFC U10"},
+    {"label": "HRFC U11", "group_name": "HRFC U11"},
     {"label": "HRFC U12", "group_name": "HRFC U12"},
     {"label": "HRFC U13", "group_name": "HRFC U13"},
     {"label": "HRFC U14", "group_name": "HRFC U14"},
     {"label": "HRFC HURRICANES", "group_name": "HRFC HURRICANES"},
     {"label": "HRFC COLTS", "group_name": "HRFC COLTS"},
+    {"label": "WARRIORS U12", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U12"},
+    {"label": "WARRIORS U14", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U14"},
+    {"label": "WARRIORS U16", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U16"},
 ]
 
 st.set_page_config(page_title="HRFC Spond Rates", layout="wide")
@@ -209,11 +215,11 @@ def render_card(results):
 
         rows_html += (
             f'<tr style="background-color: {bg_colour}; border: none; white-space: nowrap;">'
-            f'<td style="padding: 10px 18px; text-align: left; font-weight: 700; color: #FFFFFF; font-size: 15px;">{r["label"]}</td>'
-            f'<td style="padding: 10px 18px; text-align: center; color: #FFFFFF; font-size: 15px;">{r["acc"]}</td>'
-            f'<td style="padding: 10px 18px; text-align: center; color: #FFFFFF; font-size: 15px;">{r["dec"]}</td>'
-            f'<td style="padding: 10px 18px; text-align: center; color: #FFFFFF; font-size: 15px;">{r["una"]}</td>'
-            f'<td style="padding: 10px 18px; text-align: right; font-weight: 700; color: {rate_color}; font-size: 15px;">{r["rate_str"]}</td>'
+            f'<td style="padding: 8px 18px; text-align: left; font-weight: 700; color: #FFFFFF; font-size: 14px;">{r["label"]}</td>'
+            f'<td style="padding: 8px 18px; text-align: center; color: #FFFFFF; font-size: 14px;">{r["acc"]}</td>'
+            f'<td style="padding: 8px 18px; text-align: center; color: #FFFFFF; font-size: 14px;">{r["dec"]}</td>'
+            f'<td style="padding: 8px 18px; text-align: center; color: #FFFFFF; font-size: 14px;">{r["una"]}</td>'
+            f'<td style="padding: 8px 18px; text-align: right; font-weight: 700; color: {rate_color}; font-size: 14px;">{r["rate_str"]}</td>'
             f'</tr>'
         )
 
@@ -240,7 +246,7 @@ def render_card(results):
         f'</head>'
         f'<body>'
         f'<div class="card">'
-        f'<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 32px; margin-bottom: 20px;">'
+        f'<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 32px; margin-bottom: 16px;">'
         f'<div>'
         f'<div style="color: #FFE602; font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">'
         f'HRFC TEAM SPOND RESPONSE RATES'
@@ -267,7 +273,7 @@ def render_card(results):
         f'</body>'
         f'</html>'
     )
-    components.html(card_html, height=650, scrolling=False)
+    components.html(card_html, height=950, scrolling=False)
 
 
 # Execution
