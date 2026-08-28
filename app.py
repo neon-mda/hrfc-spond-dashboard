@@ -300,16 +300,22 @@ def render_card(results, subtitle_suffix=""):
         f'overflow-x: auto;'
         f'-webkit-overflow-scrolling: touch;'
         f'border-radius: 8px;'
+        f'scrollbar-color: rgba(255, 255, 255, 0.45) #1C0304;'
+        f'scrollbar-width: thin;'
         f'}}'
         f'.table-container::-webkit-scrollbar {{'
         f'height: 6px;'
         f'}}'
         f'.table-container::-webkit-scrollbar-track {{'
         f'background: #1C0304;'
+        f'border-radius: 4px;'
         f'}}'
         f'.table-container::-webkit-scrollbar-thumb {{'
-        f'background: #821C34;'
+        f'background: rgba(255, 255, 255, 0.45);'
         f'border-radius: 4px;'
+        f'}}'
+        f'.table-container::-webkit-scrollbar-thumb:hover {{'
+        f'background: rgba(255, 255, 255, 0.7);'
         f'}}'
         f'table {{'
         f'width: 100%;'
@@ -369,7 +375,7 @@ def render_card(results, subtitle_suffix=""):
 top_col1, top_col2 = st.columns([2, 8])
 
 with top_col1:
-    if st.button("🔄 Refresh Spond Data"):
+    if st.button("🔄 Force Refresh Data"):
         st.cache_data.clear()
         st.rerun()
 
