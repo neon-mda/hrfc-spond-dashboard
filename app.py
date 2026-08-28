@@ -69,7 +69,7 @@ def get_next_event(events, now_utc):
     for ev in events or []:
         if ev.get("hidden") is True:
             continue
-        st_time = parse_utc_timestamp(ev.get("startTimestamp")
+        st_time = parse_utc_timestamp(ev.get("startTimestamp"))
         if st_time and st_time >= now_utc:
             upcoming.append((st_time, ev))
 
@@ -258,7 +258,7 @@ def render_card(results, subtitle_suffix=""):
             f'<td class="sticky-col" style="background-color: {bg_colour}; padding: 8px 14px; text-align: left; font-weight: 600; color: #F3C5CE; font-size: 13px;">{r["lead"]}</td>'
             f'<td style="padding: 8px 14px; text-align: left; font-weight: 700; color: #FFFFFF; font-size: 13px;">{r["label"]}</td>'
             f'<td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">{r["acc"]}</td>'
-            f'<td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">{r["dec"]}</td>'
+            f'<td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 14px;">{r["dec"]}</td>'
             f'<td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">{r["una"]}</td>'
             f'<td style="padding: 8px 14px; text-align: right; font-weight: 700; color: {rate_color}; font-size: 13px;">{r["rate_str"]}</td>'
             f'</tr>'
