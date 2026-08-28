@@ -13,20 +13,20 @@ from zoneinfo import ZoneInfo
 LOGO_IMAGE_PATH = Path("HRFC_CREST.png")
 
 TARGET_SPECS = [
-    {"label": "HRFC U6", "group_name": "HRFC U6", "category": "minis", "lead": "MATT"},
-    {"label": "HRFC U7", "group_name": "HRFC U7", "category": "minis", "lead": "NICK"},
-    {"label": "HRFC U8", "group_name": "HRFC U8", "category": "minis", "lead": "SARAH"},
-    {"label": "HRFC U9", "group_name": "HRFC U9", "category": "minis", "lead": "DEBBIE"},
-    {"label": "HRFC U10", "group_name": "HRFC U10", "category": "minis", "lead": "STEVE"},
-    {"label": "HRFC U11", "group_name": "HRFC U11", "category": "minis", "lead": "JEN"},
-    {"label": "HRFC U12", "group_name": "HRFC U12", "category": "minis", "lead": "HARRY"},
-    {"label": "HRFC U13", "group_name": "HRFC U13", "category": "juniors_youth", "lead": "COXY"},
-    {"label": "HRFC U14", "group_name": "HRFC U14", "category": "juniors_youth", "lead": "JONNY"},
-    {"label": "HRFC HURRICANES", "group_name": "HRFC HURRICANES", "category": "juniors_youth", "lead": "LUCAS"},
-    {"label": "HRFC COLTS", "group_name": "HRFC COLTS", "category": "juniors_youth", "lead": "MARK"},
-    {"label": "WARRIORS U12", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U12", "category": "juniors_youth", "lead": "HELEN"},
-    {"label": "WARRIORS U14", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U14", "category": "juniors_youth", "lead": "JO"},
-    {"label": "WARRIORS U16", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U16", "category": "juniors_youth", "lead": "HELEN"},
+    {"label": "HRFC U6", "group_name": "HRFC U6", "category": "minis", "lead": "TBC"},
+    {"label": "HRFC U7", "group_name": "HRFC U7", "category": "minis", "lead": "TBC"},
+    {"label": "HRFC U8", "group_name": "HRFC U8", "category": "minis", "lead": "TBC"},
+    {"label": "HRFC U9", "group_name": "HRFC U9", "category": "minis", "lead": "TBC"},
+    {"label": "HRFC U10", "group_name": "HRFC U10", "category": "minis", "lead": "TBC"},
+    {"label": "HRFC U11", "group_name": "HRFC U11", "category": "minis", "lead": "TBC"},
+    {"label": "HRFC U12", "group_name": "HRFC U12", "category": "minis", "lead": "TBC"},
+    {"label": "HRFC U13", "group_name": "HRFC U13", "category": "juniors_youth", "lead": "TBC"},
+    {"label": "HRFC U14", "group_name": "HRFC U14", "category": "juniors_youth", "lead": "TBC"},
+    {"label": "HRFC HURRICANES", "group_name": "HRFC HURRICANES", "category": "juniors_youth", "lead": "Matt Allard"},
+    {"label": "HRFC COLTS", "group_name": "HRFC COLTS", "category": "juniors_youth", "lead": "TBC"},
+    {"label": "WARRIORS U12", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U12", "category": "juniors_youth", "lead": "TBC"},
+    {"label": "WARRIORS U14", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U14", "category": "juniors_youth", "lead": "TBC"},
+    {"label": "WARRIORS U16", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U16", "category": "juniors_youth", "lead": "Matt Allard"},
 ]
 
 st.set_page_config(page_title="HRFC Spond Rates", layout="wide")
@@ -233,11 +233,10 @@ def render_card(results, subtitle_suffix=""):
     uk_now = datetime.now(uk_tz)
     timestamp = uk_now.strftime("As at %d %b %Y, %H:%M")
 
-    # Determine earliest upcoming session date for dynamic title
     upcoming_dates = [r["event_time"] for r in results if r.get("event_time") is not None]
     if upcoming_dates:
         earliest_dt = min(upcoming_dates).astimezone(uk_tz)
-        date_prefix = earliest_dt.strftime("%a %d %b").upper()
+        date_prefix = earliest_dt.strftime("%a %d-%b").upper()
         card_title = f"{date_prefix} - HRFC TEAM SPOND RESPONSE RATES"
     else:
         card_title = "HRFC TEAM SPOND RESPONSE RATES"
@@ -246,22 +245,22 @@ def render_card(results, subtitle_suffix=""):
     if LOGO_IMAGE_PATH.exists():
         with open(LOGO_IMAGE_PATH, "rb") as f:
             b64_data = base64.b64encode(f.read()).decode("utf-8")
-            logo_img_tag = f'<img src="data:image/png;base64,{b64_data}" style="height: 75px; width: auto; object-fit: contain;">'
+            logo_img_tag = f'<img src="data:image/png;base64,{b64_data}" style="height: 64px; width: auto; object-fit: contain;">'
 
     rows_html = ""
     for idx, r in enumerate(results):
         rate_val = r["rate"]
         rate_color = "#10B981" if rate_val >= 70 else ("#F59E0B" if rate_val >= 50 else "#EF4444")
-        bg_colour = "#821C34" if idx % 2 == 0 else "transparent"
+        bg_colour = "#821C34" if idx % 2 == 0 else "#1C0304"
 
         rows_html += (
             f'<tr style="background-color: {bg_colour}; border: none; white-space: nowrap;">'
-            f'<td style="padding: 8px 18px; text-align: left; font-weight: 600; color: #F3C5CE; font-size: 14px;">{r["lead"]}</td>'
-            f'<td style="padding: 8px 18px; text-align: left; font-weight: 700; color: #FFFFFF; font-size: 14px;">{r["label"]}</td>'
-            f'<td style="padding: 8px 18px; text-align: center; color: #FFFFFF; font-size: 14px;">{r["acc"]}</td>'
-            f'<td style="padding: 8px 18px; text-align: center; color: #FFFFFF; font-size: 14px;">{r["dec"]}</td>'
-            f'<td style="padding: 8px 18px; text-align: center; color: #FFFFFF; font-size: 14px;">{r["una"]}</td>'
-            f'<td style="padding: 8px 18px; text-align: right; font-weight: 700; color: {rate_color}; font-size: 14px;">{r["rate_str"]}</td>'
+            f'<td class="sticky-col" style="background-color: {bg_colour}; padding: 8px 14px; text-align: left; font-weight: 600; color: #F3C5CE; font-size: 13px;">{r["lead"]}</td>'
+            f'<td style="padding: 8px 14px; text-align: left; font-weight: 700; color: #FFFFFF; font-size: 13px;">{r["label"]}</td>'
+            f'<td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">{r["acc"]}</td>'
+            f'<td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">{r["dec"]}</td>'
+            f'<td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">{r["una"]}</td>'
+            f'<td style="padding: 8px 14px; text-align: right; font-weight: 700; color: {rate_color}; font-size: 13px;">{r["rate_str"]}</td>'
             f'</tr>'
         )
 
@@ -273,28 +272,67 @@ def render_card(results, subtitle_suffix=""):
         f'<!DOCTYPE html>'
         f'<html>'
         f'<head>'
+        f'<meta name="viewport" content="width=device-width, initial-scale=1.0">'
         f'<link rel="preconnect" href="https://fonts.googleapis.com">'
         f'<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
         f'<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">'
         f'<style>'
         f'* {{ box-sizing: border-box; font-family: "Poppins", sans-serif; margin: 0; padding: 0; }}'
-        f'body {{ background-color: transparent; padding: 8px; }}'
+        f'body {{ background-color: transparent; padding: 4px; }}'
         f'.card {{'
         f'background-color: #1C0304;'
         f'border: 1px solid rgba(130, 28, 52, 0.4);'
         f'border-radius: 16px;'
-        f'padding: 24px;'
-        f'display: inline-block;'
+        f'padding: 18px 16px;'
+        f'width: 100%;'
+        f'max-width: 100%;'
         f'box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);'
-        f'white-space: nowrap;'
+        f'}}'
+        f'.header-container {{'
+        f'display: flex;'
+        f'justify-content: space-between;'
+        f'align-items: center;'
+        f'gap: 16px;'
+        f'margin-bottom: 14px;'
+        f'}}'
+        f'.table-container {{'
+        f'width: 100%;'
+        f'overflow-x: auto;'
+        f'-webkit-overflow-scrolling: touch;'
+        f'border-radius: 8px;'
+        f'}}'
+        f'.table-container::-webkit-scrollbar {{'
+        f'height: 6px;'
+        f'}}'
+        f'.table-container::-webkit-scrollbar-track {{'
+        f'background: #1C0304;'
+        f'}}'
+        f'.table-container::-webkit-scrollbar-thumb {{'
+        f'background: #821C34;'
+        f'border-radius: 4px;'
+        f'}}'
+        f'table {{'
+        f'width: 100%;'
+        f'border-collapse: collapse;'
+        f'min-width: 600px;'
+        f'}}'
+        f'.sticky-col {{'
+        f'position: sticky;'
+        f'left: 0;'
+        f'z-index: 2;'
+        f'box-shadow: 2px 0 5px rgba(0,0,0,0.3);'
+        f'}}'
+        f'th.sticky-col {{'
+        f'background-color: #1C0304;'
+        f'z-index: 3;'
         f'}}'
         f'</style>'
         f'</head>'
         f'<body>'
         f'<div class="card">'
-        f'<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 32px; margin-bottom: 16px;">'
+        f'<div class="header-container">'
         f'<div>'
-        f'<div style="color: #FFE602; font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">'
+        f'<div style="color: #FFE602; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2;">'
         f'{card_title}'
         f'</div>'
         f'<div style="color: #F3C5CE; font-size: 11px; font-weight: 500; margin-top: 4px;">'
@@ -303,25 +341,27 @@ def render_card(results, subtitle_suffix=""):
         f'</div>'
         f'<div>{logo_img_tag}</div>'
         f'</div>'
-        f'<table style="width: 100%; border-collapse: collapse;">'
+        f'<div class="table-container">'
+        f'<table>'
         f'<thead>'
         f'<tr style="border: none; white-space: nowrap;">'
-        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: left; padding: 8px 18px;">LEAD</th>'
-        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: left; padding: 8px 18px;">TEAM</th>'
-        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: center; padding: 8px 18px;">ACCEPTED</th>'
-        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: center; padding: 8px 18px;">DECLINED</th>'
-        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: center; padding: 8px 18px;">NO RESPONSE</th>'
-        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: right; padding: 8px 18px;">% RESPONDED</th>'
+        f'<th class="sticky-col" style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: left; padding: 8px 14px;">LEAD</th>'
+        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: left; padding: 8px 14px;">TEAM</th>'
+        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: center; padding: 8px 14px;">ACCEPTED</th>'
+        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: center; padding: 8px 14px;">DECLINED</th>'
+        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: center; padding: 8px 14px;">NO RESPONSE</th>'
+        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: right; padding: 8px 14px;">% RESPONDED</th>'
         f'</tr>'
         f'</thead>'
         f'<tbody>{rows_html}</tbody>'
         f'</table>'
         f'</div>'
+        f'</div>'
         f'</body>'
         f'</html>'
     )
 
-    card_height = 180 + (len(results) * 44)
+    card_height = 200 + (len(results) * 44)
     components.html(card_html, height=card_height, scrolling=False)
 
 
@@ -329,7 +369,7 @@ def render_card(results, subtitle_suffix=""):
 top_col1, top_col2 = st.columns([2, 8])
 
 with top_col1:
-    if st.button("🔄 Refresh Data"):
+    if st.button("🔄 Force Refresh Data"):
         st.cache_data.clear()
         st.rerun()
 
