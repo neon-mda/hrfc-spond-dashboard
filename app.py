@@ -13,20 +13,20 @@ from zoneinfo import ZoneInfo
 LOGO_IMAGE_PATH = Path("HRFC_CREST.png")
 
 TARGET_SPECS = [
-    {"label": "HRFC U6", "group_name": "HRFC U6", "category": "minis", "lead": "TBC"},
-    {"label": "HRFC U7", "group_name": "HRFC U7", "category": "minis", "lead": "TBC"},
-    {"label": "HRFC U8", "group_name": "HRFC U8", "category": "minis", "lead": "TBC"},
-    {"label": "HRFC U9", "group_name": "HRFC U9", "category": "minis", "lead": "TBC"},
-    {"label": "HRFC U10", "group_name": "HRFC U10", "category": "minis", "lead": "TBC"},
-    {"label": "HRFC U11", "group_name": "HRFC U11", "category": "minis", "lead": "TBC"},
-    {"label": "HRFC U12", "group_name": "HRFC U12", "category": "minis", "lead": "TBC"},
-    {"label": "HRFC U13", "group_name": "HRFC U13", "category": "juniors_youth", "lead": "TBC"},
-    {"label": "HRFC U14", "group_name": "HRFC U14", "category": "juniors_youth", "lead": "TBC"},
-    {"label": "HRFC HURRICANES", "group_name": "HRFC HURRICANES", "category": "juniors_youth", "lead": "Matt Allard"},
-    {"label": "HRFC COLTS", "group_name": "HRFC COLTS", "category": "juniors_youth", "lead": "TBC"},
-    {"label": "WARRIORS U12", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U12", "category": "juniors_youth", "lead": "TBC"},
-    {"label": "WARRIORS U14", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U14", "category": "juniors_youth", "lead": "TBC"},
-    {"label": "WARRIORS U16", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U16", "category": "juniors_youth", "lead": "Matt Allard"},
+    {"label": "HRFC U6", "group_name": "HRFC U6", "category": "minis", "lead": "MATT"},
+    {"label": "HRFC U7", "group_name": "HRFC U7", "category": "minis", "lead": "NICK"},
+    {"label": "HRFC U8", "group_name": "HRFC U8", "category": "minis", "lead": "SARAH"},
+    {"label": "HRFC U9", "group_name": "HRFC U9", "category": "minis", "lead": "DEBBIE"},
+    {"label": "HRFC U10", "group_name": "HRFC U10", "category": "minis", "lead": "STEVE"},
+    {"label": "HRFC U11", "group_name": "HRFC U11", "category": "minis", "lead": "JEN"},
+    {"label": "HRFC U12", "group_name": "HRFC U12", "category": "minis", "lead": "HARRY"},
+    {"label": "HRFC U13", "group_name": "HRFC U13", "category": "juniors_youth", "lead": "COXY"},
+    {"label": "HRFC U14", "group_name": "HRFC U14", "category": "juniors_youth", "lead": "JONNY"},
+    {"label": "HRFC HURRICANES", "group_name": "HRFC HURRICANES", "category": "juniors_youth", "lead": "LUCAS"},
+    {"label": "HRFC COLTS", "group_name": "HRFC COLTS", "category": "juniors_youth", "lead": "MARK"},
+    {"label": "WARRIORS U12", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U12", "category": "juniors_youth", "lead": "HELEN"},
+    {"label": "WARRIORS U14", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U14", "category": "juniors_youth", "lead": "JO"},
+    {"label": "WARRIORS U16", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U16", "category": "juniors_youth", "lead": "HELEN"},
 ]
 
 st.set_page_config(page_title="HRFC Spond Rates", layout="wide")
@@ -69,7 +69,7 @@ def get_next_event(events, now_utc):
     for ev in events or []:
         if ev.get("hidden") is True:
             continue
-        st_time = parse_utc_timestamp(ev.get("startTimestamp"))
+        st_time = parse_utc_timestamp(ev.get("startTimestamp")
         if st_time and st_time >= now_utc:
             upcoming.append((st_time, ev))
 
@@ -236,7 +236,7 @@ def render_card(results, subtitle_suffix=""):
     upcoming_dates = [r["event_time"] for r in results if r.get("event_time") is not None]
     if upcoming_dates:
         earliest_dt = min(upcoming_dates).astimezone(uk_tz)
-        date_prefix = earliest_dt.strftime("%a %d-%b").upper()
+        date_prefix = earliest_dt.strftime("%a %d %b").upper()
         card_title = f"{date_prefix} - HRFC TEAM SPOND RESPONSE RATES"
     else:
         card_title = "HRFC TEAM SPOND RESPONSE RATES"
