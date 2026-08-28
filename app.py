@@ -13,20 +13,20 @@ from zoneinfo import ZoneInfo
 LOGO_IMAGE_PATH = Path("HRFC_CREST.png")
 
 TARGET_SPECS = [
-    {"label": "HRFC U6", "group_name": "HRFC U6"},
-    {"label": "HRFC U7", "group_name": "HRFC U7"},
-    {"label": "HRFC U8", "group_name": "HRFC U8"},
-    {"label": "HRFC U9", "group_name": "HRFC U9"},
-    {"label": "HRFC U10", "group_name": "HRFC U10"},
-    {"label": "HRFC U11", "group_name": "HRFC U11"},
-    {"label": "HRFC U12", "group_name": "HRFC U12"},
-    {"label": "HRFC U13", "group_name": "HRFC U13"},
-    {"label": "HRFC U14", "group_name": "HRFC U14"},
-    {"label": "HRFC HURRICANES", "group_name": "HRFC HURRICANES"},
-    {"label": "HRFC COLTS", "group_name": "HRFC COLTS"},
-    {"label": "WARRIORS U12", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U12"},
-    {"label": "WARRIORS U14", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U14"},
-    {"label": "WARRIORS U16", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U16"},
+    {"label": "HRFC U6", "group_name": "HRFC U6", "category": "minis"},
+    {"label": "HRFC U7", "group_name": "HRFC U7", "category": "minis"},
+    {"label": "HRFC U8", "group_name": "HRFC U8", "category": "minis"},
+    {"label": "HRFC U9", "group_name": "HRFC U9", "category": "minis"},
+    {"label": "HRFC U10", "group_name": "HRFC U10", "category": "minis"},
+    {"label": "HRFC U11", "group_name": "HRFC U11", "category": "minis"},
+    {"label": "HRFC U12", "group_name": "HRFC U12", "category": "minis"},
+    {"label": "HRFC U13", "group_name": "HRFC U13", "category": "juniors_youth"},
+    {"label": "HRFC U14", "group_name": "HRFC U14", "category": "juniors_youth"},
+    {"label": "HRFC HURRICANES", "group_name": "HRFC HURRICANES", "category": "juniors_youth"},
+    {"label": "HRFC COLTS", "group_name": "HRFC COLTS", "category": "juniors_youth"},
+    {"label": "WARRIORS U12", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U12", "category": "minis"},
+    {"label": "WARRIORS U14", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U14", "category": "juniors_youth"},
+    {"label": "WARRIORS U16", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U16", "category": "juniors_youth"},
 ]
 
 st.set_page_config(page_title="HRFC Spond Rates", layout="wide")
@@ -113,7 +113,7 @@ def calculate_attendance(event):
     return {"acc": n_acc, "dec": n_dec, "una": n_una, "rate": rate, "rate_str": f"{rate:.1f}%"}
 
 
-async def fetch_spond_data():
+async def _fetch_spond_data_async():
     username = st.secrets.get("SPOND_USER", os.getenv("SPOND_USER"))
     password = st.secrets.get("SPOND_PASS", os.getenv("SPOND_PASS"))
 
@@ -132,6 +132,7 @@ async def fetch_spond_data():
 
         for spec in TARGET_SPECS:
             label = spec["label"]
+            category = spec["category"]
             group_id, subgroup_id = None, None
 
             if "parent_group" in spec:
@@ -147,7 +148,15 @@ async def fetch_spond_data():
                     group_id = grp.get("id")
 
             if not group_id:
-                results.append({"label": label, "acc": 0, "dec": 0, "una": 0, "rate": 0.0, "rate_str": "0.0%"})
+                results.append({
+                    "label": label,
+                    "category": category,
+                    "acc": 0,
+                    "dec": 0,
+                    "una": 0,
+                    "rate": 0.0,
+                    "rate_str": "0.0%",
+                })
                 continue
 
             query = {
@@ -164,7 +173,15 @@ async def fetch_spond_data():
             next_ev = get_next_event(events, now_utc)
 
             if not next_ev:
-                results.append({"label": label, "acc": 0, "dec": 0, "una": 0, "rate": 0.0, "rate_str": "0.0%"})
+                results.append({
+                    "label": label,
+                    "category": category,
+                    "acc": 0,
+                    "dec": 0,
+                    "una": 0,
+                    "rate": 0.0,
+                    "rate_str": "0.0%",
+                })
                 continue
 
             ev_id = next_ev.get("id")
@@ -182,6 +199,7 @@ async def fetch_spond_data():
             stats = calculate_attendance(detailed_ev)
             results.append({
                 "label": label,
+                "category": category,
                 "acc": stats["acc"],
                 "dec": stats["dec"],
                 "una": stats["una"],
@@ -197,7 +215,12 @@ async def fetch_spond_data():
     return results
 
 
-def render_card(results):
+@st.cache_data(ttl=300, show_spinner=False)
+def load_all_spond_data():
+    return asyncio.run(_fetch_spond_data_async())
+
+
+def render_card(results, subtitle_suffix=""):
     uk_now = datetime.now(ZoneInfo("Europe/London"))
     timestamp = uk_now.strftime("As at %d %b %Y, %H:%M")
 
@@ -222,6 +245,10 @@ def render_card(results):
             f'<td style="padding: 8px 18px; text-align: right; font-weight: 700; color: {rate_color}; font-size: 14px;">{r["rate_str"]}</td>'
             f'</tr>'
         )
+
+    subtitle = f"Upcoming Fixtures & Sessions &bull; {timestamp}"
+    if subtitle_suffix:
+        subtitle = f"{subtitle_suffix} &bull; {timestamp}"
 
     card_html = (
         f'<!DOCTYPE html>'
@@ -252,7 +279,7 @@ def render_card(results):
         f'HRFC TEAM SPOND RESPONSE RATES'
         f'</div>'
         f'<div style="color: #F3C5CE; font-size: 11px; font-weight: 500; margin-top: 4px;">'
-        f'Upcoming Fixtures & Sessions &bull; {timestamp}'
+        f'{subtitle}'
         f'</div>'
         f'</div>'
         f'<div>{logo_img_tag}</div>'
@@ -273,17 +300,41 @@ def render_card(results):
         f'</body>'
         f'</html>'
     )
-    components.html(card_html, height=950, scrolling=False)
+
+    card_height = 180 + (len(results) * 44)
+    components.html(card_html, height=card_height, scrolling=False)
 
 
-# Execution
-col1, col2 = st.columns([1, 8])
-with col1:
-    if st.button("🔄 Refresh Data"):
+# Controls & Layout
+top_col1, top_col2 = st.columns([2, 8])
+
+with top_col1:
+    if st.button("🔄 Force Refresh Data"):
+        st.cache_data.clear()
         st.rerun()
 
-with st.spinner("Fetching latest Spond response data..."):
-    data = asyncio.run(fetch_spond_data())
+with top_col2:
+    view_choice = st.segmented_control(
+        "Section",
+        options=["All Teams", "Minis (U6–U12)", "Juniors & Youth (U13+ / Warriors)"],
+        default="All Teams",
+        label_visibility="collapsed",
+    )
+    if not view_choice:
+        view_choice = "All Teams"
 
-if data:
-    render_card(data)
+with st.spinner("Fetching latest Spond response data..."):
+    all_data = load_all_spond_data()
+
+if all_data:
+    if view_choice == "Minis (U6–U12)":
+        filtered_data = [d for d in all_data if d["category"] == "minis"]
+        suffix = "Minis Section (U6–U12)"
+    elif view_choice == "Juniors & Youth (U13+ / Warriors)":
+        filtered_data = [d for d in all_data if d["category"] == "juniors_youth"]
+        suffix = "Juniors & Youth Section (U13+)"
+    else:
+        filtered_data = all_data
+        suffix = "All Teams"
+
+    render_card(filtered_data, subtitle_suffix=suffix)
