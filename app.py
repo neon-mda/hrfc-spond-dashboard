@@ -237,7 +237,7 @@ def render_card(results, subtitle_suffix=""):
     upcoming_dates = [r["event_time"] for r in results if r.get("event_time") is not None]
     if upcoming_dates:
         earliest_dt = min(upcoming_dates).astimezone(uk_tz)
-        date_prefix = earliest_dt.strftime("%a %d-%b").upper()
+        date_prefix = earliest_dt.strftime("%a %d %b").upper()
         card_title = f"{date_prefix} - HRFC TEAM SPOND RESPONSE RATES"
     else:
         card_title = "HRFC TEAM SPOND RESPONSE RATES"
