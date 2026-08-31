@@ -14,20 +14,20 @@ from zoneinfo import ZoneInfo
 LOGO_IMAGE_PATH = Path("HRFC_CREST.png")
 
 TARGET_SPECS = [
-    {"label": "HRFC U6", "group_name": "U6", "alt_name": "HRFC U6", "category": "minis", "lead": "MATT"},
-    {"label": "HRFC U7", "group_name": "U7", "alt_name": "HRFC U7", "category": "minis", "lead": "NICK"},
-    {"label": "HRFC U8", "group_name": "U8", "alt_name": "HRFC U8", "category": "minis", "lead": "SARAH"},
-    {"label": "HRFC U9", "group_name": "U9", "alt_name": "HRFC U9", "category": "minis", "lead": "DEBBIE"},
-    {"label": "HRFC U10", "group_name": "U10", "alt_name": "HRFC U10", "category": "minis", "lead": "STEVE"},
-    {"label": "HRFC U11", "group_name": "U11", "alt_name": "HRFC U11", "category": "minis", "lead": "JEN"},
-    {"label": "HRFC U12", "group_name": "U12", "alt_name": "HRFC U12", "category": "minis", "lead": "HARRY"},
-    {"label": "HRFC U13", "group_name": "U13", "alt_name": "HRFC U13", "category": "juniors_youth", "lead": "COXY"},
-    {"label": "HRFC U14", "group_name": "U14", "alt_name": "HRFC U14", "category": "juniors_youth", "lead": "JONNY"},
-    {"label": "HRFC HURRICANES", "group_name": "HURRICANES", "alt_name": "HRFC HURRICANES", "category": "juniors_youth", "lead": "HELEN"},
-    {"label": "HRFC COLTS", "group_name": "COLTS", "alt_name": "HRFC COLTS", "category": "juniors_youth", "lead": "MARK"},
-    {"label": "WARRIORS U12", "group_name": "WARRIORS U12", "alt_name": "WARRIORS U12", "category": "juniors_youth", "lead": "HELEN"},
-    {"label": "WARRIORS U14", "group_name": "WARRIORS U14", "alt_name": "WARRIORS U14", "category": "juniors_youth", "lead": "JO"},
-    {"label": "WARRIORS U16", "group_name": "WARRIORS U16", "alt_name": "WARRIORS U16", "category": "juniors_youth", "lead": "HELEN"},
+    {"label": "HRFC U6", "name": "U6", "category": "minis", "lead": "MATT"},
+    {"label": "HRFC U7", "name": "U7", "category": "minis", "lead": "NICK"},
+    {"label": "HRFC U8", "name": "U8", "category": "minis", "lead": "SARAH"},
+    {"label": "HRFC U9", "name": "U9", "category": "minis", "lead": "DEBBIE"},
+    {"label": "HRFC U10", "name": "U10", "category": "minis", "lead": "STEVE"},
+    {"label": "HRFC U11", "name": "U11", "category": "minis", "lead": "JEN"},
+    {"label": "HRFC U12", "name": "U12", "category": "minis", "lead": "HARRY"},
+    {"label": "HRFC U13", "name": "U13", "category": "juniors_youth", "lead": "COXY"},
+    {"label": "HRFC U14", "name": "U14", "category": "juniors_youth", "lead": "JONNY"},
+    {"label": "HRFC HURRICANES", "name": "HURRICANES", "category": "juniors_youth", "lead": "HELEN"},
+    {"label": "HRFC COLTS", "name": "COLTS", "category": "juniors_youth", "lead": "MARK"},
+    {"label": "WARRIORS U12", "name": "WARRIORS U12", "category": "juniors_youth", "lead": "HELEN"},
+    {"label": "WARRIORS U14", "name": "WARRIORS U14", "category": "juniors_youth", "lead": "JO"},
+    {"label": "WARRIORS U16", "name": "WARRIORS U16", "category": "juniors_youth", "lead": "HELEN"},
 ]
 
 CUSTOM_TEAM_ORDER = {spec["label"]: idx for idx, spec in enumerate(TARGET_SPECS)}
@@ -51,23 +51,32 @@ def parse_utc_timestamp(val):
         return None
 
 
-def resolve_group(groups, spec):
-    name_primary = clean(spec.get("group_name", ""))
-    name_alt = clean(spec.get("alt_name", ""))
-    label = clean(spec.get("label", ""))
+def match_name(target_str, candidate_name):
+    t = clean(target_str)
+    c = clean(candidate_name)
+    if not t or not c:
+        return False
+    return t == c or t in c or c in t
 
+
+def resolve_target(groups, spec):
+    target_key = spec.get("name", "")
+    target_label = spec.get("label", "")
+
+    # 1. Direct top-level group match
     for g in groups:
-        g_name = clean(g.get("name", ""))
-        if not g_name:
-            continue
-        if g_name == name_primary or g_name == name_alt or g_name == label:
-            return g
-        if name_primary and (name_primary in g_name or g_name in name_primary):
-            return g
-        if name_alt and (name_alt in g_name or g_name in name_alt):
-            return g
+        g_name = g.get("name", "")
+        if match_name(target_key, g_name) or match_name(target_label, g_name):
+            return g.get("id"), None
 
-    return None
+    # 2. Nested subgroup match within any parent group
+    for g in groups:
+        for sg in g.get("subGroups", []):
+            sg_name = sg.get("name", "")
+            if match_name(target_key, sg_name) or match_name(target_label, sg_name):
+                return g.get("id"), sg.get("id")
+
+    return None, None
 
 
 def get_next_event(events, now_utc):
@@ -144,8 +153,7 @@ async def _fetch_spond_data_async():
             category = spec["category"]
             lead = spec.get("lead", "")
 
-            grp = resolve_group(all_groups, spec)
-            group_id = grp.get("id") if grp else None
+            group_id, subgroup_id = resolve_target(all_groups, spec)
 
             if not group_id:
                 results.append({
@@ -163,9 +171,13 @@ async def _fetch_spond_data_async():
                 })
                 continue
 
+            query = {"group_id": group_id, "max_events": 100}
+            if subgroup_id:
+                query["subgroup_id"] = subgroup_id
+
             events = []
             try:
-                events = await client.get_events(group_id=group_id, max_events=100) or []
+                events = await client.get_events(**query) or []
             except Exception:
                 events = []
 
