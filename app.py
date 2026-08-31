@@ -29,6 +29,8 @@ TARGET_SPECS = [
     {"label": "WARRIORS U16", "group_name": "WARRIORS U16", "category": "juniors_youth", "lead": "HELEN"},
 ]
 
+CUSTOM_TEAM_ORDER = {spec["label"]: idx for idx, spec in enumerate(TARGET_SPECS)}
+
 st.set_page_config(page_title="HRFC Spond Rates", layout="wide")
 
 
@@ -208,6 +210,25 @@ def load_all_spond_data():
     return asyncio.run(_fetch_spond_data_async())
 
 
+def sort_results(data, sort_key, order_ascending):
+    if sort_key == "label":
+        return sorted(
+            data,
+            key=lambda x: CUSTOM_TEAM_ORDER.get(x["label"], 999),
+            reverse=not order_ascending,
+        )
+    elif sort_key == "lead":
+        return sorted(data, key=lambda x: x["lead"].lower(), reverse=not order_ascending)
+    elif sort_key == "acc":
+        return sorted(data, key=lambda x: x["acc"], reverse=not order_ascending)
+    elif sort_key == "dec":
+        return sorted(data, key=lambda x: x["dec"], reverse=not order_ascending)
+    elif sort_key == "una":
+        return sorted(data, key=lambda x: x["una"], reverse=not order_ascending)
+    else:  # default: rate
+        return sorted(data, key=lambda x: x["rate"], reverse=not order_ascending)
+
+
 def render_card(results, subtitle_suffix=""):
     uk_tz = ZoneInfo("Europe/London")
     uk_now = datetime.now(uk_tz)
@@ -381,6 +402,31 @@ with top_col2:
     if not view_choice:
         view_choice = "All Teams"
 
+# Sorting controls
+sort_col1, sort_col2 = st.columns([3, 2])
+with sort_col1:
+    sort_label_map = {
+        "% Responded": "rate",
+        "Team (Age Grade Order)": "label",
+        "Lead Name": "lead",
+        "Accepted": "acc",
+        "Declined": "dec",
+        "No Response": "una",
+    }
+    selected_sort_label = st.selectbox("Sort by", options=list(sort_label_map.keys()), index=0)
+    sort_key = sort_label_map[selected_sort_label]
+
+with sort_col2:
+    if sort_key == "label":
+        order_options = ["U6 → U16", "U16 → U6"]
+    elif sort_key == "lead":
+        order_options = ["A → Z", "Z → A"]
+    else:
+        order_options = ["High → Low", "Low → High"]
+
+    selected_order = st.selectbox("Order", options=order_options, index=0)
+    is_ascending = selected_order in ["A → Z", "Low → High", "U6 → U16"]
+
 with st.spinner("Fetching latest Spond response data..."):
     all_data = load_all_spond_data()
 
@@ -395,4 +441,5 @@ if all_data:
         filtered_data = all_data
         suffix = "All Teams"
 
-    render_card(filtered_data, subtitle_suffix=suffix)
+    sorted_data = sort_results(filtered_data, sort_key, is_ascending)
+    render_card(sorted_data, subtitle_suffix=suffix)
