@@ -69,12 +69,6 @@ def get_next_event(events, now_utc):
             upcoming.append((st_time, ev))
 
     if not upcoming:
-        for ev in events or []:
-            st_time = parse_utc_timestamp(ev.get("startTimestamp"))
-            if st_time and st_time >= now_utc:
-                upcoming.append((st_time, ev))
-
-    if not upcoming:
         return None
 
     upcoming.sort(key=lambda x: x[0])
@@ -224,37 +218,70 @@ def load_all_spond_data():
     return asyncio.run(_fetch_spond_data_async())
 
 
-def get_dynamic_card_title(results):
+def get_dynamic_card_title(results, view_category):
     uk_tz = ZoneInfo("Europe/London")
-    
-    # Collect unique dates sorted chronologically
-    dates = [r["event_time"].astimezone(uk_tz) for r in results if r.get("event_time") is not None]
-    if not dates:
+
+    # Minis only view: filter to upcoming Sunday dates (or whatever upcoming date Minis have)
+    if view_category == "minis":
+        minis_dates = [
+            r["event_time"].astimezone(uk_tz)
+            for r in results
+            if r.get("category") == "minis" and r.get("event_time") is not None
+        ]
+        if minis_dates:
+            minis_dates.sort()
+            earliest = minis_dates[0].strftime("%a %d %b").upper()
+            return f"{earliest} - HRFC TEAM SPOND RESPONSE RATES"
         return "HRFC TEAM SPOND RESPONSE RATES"
 
-    dates.sort()
-    unique_date_strs = []
-    for d in dates:
-        formatted = d.strftime("%a %d %b").upper()
-        if formatted not in unique_date_strs:
-            unique_date_strs.append(formatted)
+    # Juniors only view: filter to upcoming Wednesday or Sunday dates
+    if view_category == "juniors_youth":
+        juniors_dates = [
+            r["event_time"].astimezone(uk_tz)
+            for r in results
+            if r.get("category") == "juniors_youth" and r.get("event_time") is not None
+        ]
+        if juniors_dates:
+            juniors_dates.sort()
+            # Capture distinct upcoming dates for juniors
+            seen = []
+            for d in juniors_dates:
+                f = d.strftime("%a %d %b").upper()
+                if f not in seen:
+                    seen.append(f)
+            if len(seen) == 1:
+                return f"{seen[0]} - HRFC TEAM SPOND RESPONSE RATES"
+            return f"{seen[0]} & {seen[1]} - HRFC TEAM SPOND RESPONSE RATES"
+        return "HRFC TEAM SPOND RESPONSE RATES"
 
-    if len(unique_date_strs) == 1:
-        date_header = unique_date_strs[0]
-    elif len(unique_date_strs) == 2:
-        date_header = f"{unique_date_strs[0]} & {unique_date_strs[1]}"
+    # All Teams (No filter): resolve distinct dates across all squads
+    valid_dates = [r["event_time"].astimezone(uk_tz) for r in results if r.get("event_time") is not None]
+    if not valid_dates:
+        return "HRFC TEAM SPOND RESPONSE RATES"
+
+    valid_dates.sort()
+    unique_dates = []
+    for d in valid_dates:
+        f = d.strftime("%a %d %b").upper()
+        if f not in unique_dates:
+            unique_dates.append(f)
+
+    if len(unique_dates) == 1:
+        date_header = unique_dates[0]
+    elif len(unique_dates) == 2:
+        date_header = f"{unique_dates[0]} & {unique_dates[1]}"
     else:
-        date_header = f"{unique_date_strs[0]} - {unique_date_strs[-1]}"
+        date_header = f"{unique_dates[0]} & {unique_dates[-1]}"
 
     return f"{date_header} - HRFC TEAM SPOND RESPONSE RATES"
 
 
-def render_card(results, subtitle_suffix=""):
+def render_card(results, view_category="all", subtitle_suffix=""):
     uk_tz = ZoneInfo("Europe/London")
     uk_now = datetime.now(uk_tz)
     timestamp = uk_now.strftime("As at %d %b %Y, %H:%M")
 
-    card_title = get_dynamic_card_title(results)
+    card_title = get_dynamic_card_title(results, view_category)
 
     logo_img_tag = ""
     if LOGO_IMAGE_PATH.exists():
@@ -536,12 +563,15 @@ with st.spinner("Fetching latest Spond response data..."):
 if all_data:
     if view_choice == "Minis (U6–U12)":
         filtered_data = [d for d in all_data if d["category"] == "minis"]
+        category_key = "minis"
         suffix = "Minis Section (U6–U12)"
     elif view_choice == "Juniors (U13+ & Warriors)":
         filtered_data = [d for d in all_data if d["category"] == "juniors_youth"]
+        category_key = "juniors_youth"
         suffix = "Juniors Section (U13+ & Warriors)"
     else:
         filtered_data = all_data
+        category_key = "all"
         suffix = "All Teams"
 
-    render_card(filtered_data, subtitle_suffix=suffix)
+    render_card(filtered_data, view_category=category_key, subtitle_suffix=suffix)
