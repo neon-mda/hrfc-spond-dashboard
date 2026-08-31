@@ -24,9 +24,9 @@ TARGET_SPECS = [
     {"label": "HRFC U14", "group_name": "HRFC U14", "category": "juniors_youth", "lead": "JONNY"},
     {"label": "HRFC HURRICANES", "group_name": "HRFC HURRICANES", "category": "juniors_youth", "lead": "LUCAS"},
     {"label": "HRFC COLTS", "group_name": "HRFC COLTS", "category": "juniors_youth", "lead": "MARK"},
-    {"label": "WARRIORS U12", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U12", "category": "juniors_youth", "lead": "HELEN"},
-    {"label": "WARRIORS U14", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U14", "category": "juniors_youth", "lead": "JO"},
-    {"label": "WARRIORS U16", "parent_group": "BERKSHIRE WARRIORS", "subgroup": "U16", "category": "juniors_youth", "lead": "HELEN"},
+    {"label": "WARRIORS U12", "group_name": "WARRIORS U12", "category": "juniors_youth", "lead": "HELEN"},
+    {"label": "WARRIORS U14", "group_name": "WARRIORS U14", "category": "juniors_youth", "lead": "JO"},
+    {"label": "WARRIORS U16", "group_name": "WARRIORS U16", "category": "juniors_youth", "lead": "HELEN"},
 ]
 
 st.set_page_config(page_title="HRFC Spond Rates", layout="wide")
@@ -53,14 +53,6 @@ def resolve_group(groups, name):
     for g in groups:
         if clean(g.get("name")) == norm or norm in clean(g.get("name")):
             return g
-    return None
-
-
-def resolve_subgroup(group_obj, name):
-    norm = clean(name)
-    for sg in group_obj.get("subGroups", []):
-        if clean(sg.get("name")) == norm or norm in clean(sg.get("name")):
-            return sg
     return None
 
 
@@ -134,19 +126,9 @@ async def _fetch_spond_data_async():
             label = spec["label"]
             category = spec["category"]
             lead = spec.get("lead", "")
-            group_id, subgroup_id = None, None
 
-            if "parent_group" in spec:
-                parent = resolve_group(all_groups, spec["parent_group"])
-                if parent:
-                    group_id = parent.get("id")
-                    sg = resolve_subgroup(parent, spec["subgroup"])
-                    if sg:
-                        subgroup_id = sg.get("id")
-            else:
-                grp = resolve_group(all_groups, spec["group_name"])
-                if grp:
-                    group_id = grp.get("id")
+            grp = resolve_group(all_groups, spec["group_name"])
+            group_id = grp.get("id") if grp else None
 
             if not group_id:
                 results.append({
@@ -169,8 +151,6 @@ async def _fetch_spond_data_async():
                 "min_start": now_utc,
                 "max_events": 1000,
             }
-            if subgroup_id:
-                query["subgroup_id"] = subgroup_id
 
             events = await client.get_events(**query) or []
             next_ev = get_next_event(events, now_utc)
