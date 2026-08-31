@@ -416,7 +416,7 @@ def render_card(results, subtitle_suffix=""):
                     isAsc = !isAsc;
                 }} else {{
                     currentSortKey = key;
-                    isAsc = false; // First click always descends
+                    isAsc = false;
                 }}
 
                 rowsData.sort((a, b) => {{
