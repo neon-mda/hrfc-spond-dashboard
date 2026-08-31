@@ -105,7 +105,14 @@ def calculate_attendance(event):
     total = n_acc + n_dec + n_una
     rate = ((n_acc + n_dec) / total * 100) if total > 0 else 0.0
 
-    return {"acc": n_acc, "dec": n_dec, "una": n_una, "rate": rate, "rate_str": f"{rate:.1f}%"}
+    return {
+        "acc": n_acc,
+        "dec": n_dec,
+        "una": n_una,
+        "total": total,
+        "rate": rate,
+        "rate_str": f"{rate:.1f}%",
+    }
 
 
 async def _fetch_spond_data_async():
@@ -143,6 +150,7 @@ async def _fetch_spond_data_async():
                     "acc": 0,
                     "dec": 0,
                     "una": 0,
+                    "total": 0,
                     "rate": 0.0,
                     "rate_str": "0.0%",
                 })
@@ -169,6 +177,7 @@ async def _fetch_spond_data_async():
                     "acc": 0,
                     "dec": 0,
                     "una": 0,
+                    "total": 0,
                     "rate": 0.0,
                     "rate_str": "0.0%",
                 })
@@ -197,6 +206,7 @@ async def _fetch_spond_data_async():
                 "acc": stats["acc"],
                 "dec": stats["dec"],
                 "una": stats["una"],
+                "total": stats["total"],
                 "rate": stats["rate"],
                 "rate_str": stats["rate_str"],
             })
@@ -244,6 +254,7 @@ def render_card(results, subtitle_suffix=""):
         "acc": int(r["acc"]),
         "dec": int(r["dec"]),
         "una": int(r["una"]),
+        "total": int(r.get("total", r["acc"] + r["dec"] + r["una"])),
         "rate": float(r["rate"]),
         "rate_str": r["rate_str"]
     } for r in results]
@@ -302,7 +313,7 @@ def render_card(results, subtitle_suffix=""):
                 width: 100%;
                 border-collapse: separate;
                 border-spacing: 0;
-                min-width: 620px;
+                min-width: 640px;
             }}
             th {{
                 color: #FFE602;
@@ -340,9 +351,9 @@ def render_card(results, subtitle_suffix=""):
             .sticky-col-team {{
                 position: sticky;
                 left: 90px;
-                width: 150px;
-                min-width: 150px;
-                max-width: 150px;
+                width: 180px;
+                min-width: 180px;
+                max-width: 180px;
                 z-index: 2;
                 box-shadow: 3px 0 5px rgba(0, 0, 0, 0.35);
                 text-align: left;
@@ -350,6 +361,12 @@ def render_card(results, subtitle_suffix=""):
             th.sticky-col-lead, th.sticky-col-team {{
                 background-color: #1C0304;
                 z-index: 3;
+            }}
+            .team-total {{
+                color: #F3C5CE;
+                font-weight: 500;
+                font-size: 11px;
+                margin-left: 4px;
             }}
         </style>
     </head>
@@ -401,7 +418,9 @@ def render_card(results, subtitle_suffix=""):
                     tr.style.whiteSpace = 'nowrap';
                     tr.innerHTML = `
                         <td class="sticky-col-lead" style="background-color: ${{bgColour}}; padding: 8px 12px; text-align: left; font-weight: 600; color: #F3C5CE; font-size: 13px;">${{r.lead}}</td>
-                        <td class="sticky-col-team" style="background-color: ${{bgColour}}; padding: 8px 14px; text-align: left; font-weight: 700; color: #FFFFFF; font-size: 13px;">${{r.label}}</td>
+                        <td class="sticky-col-team" style="background-color: ${{bgColour}}; padding: 8px 14px; text-align: left; font-weight: 700; color: #FFFFFF; font-size: 13px;">
+                            ${{r.label}} <span class="team-total">(${{r.total}})</span>
+                        </td>
                         <td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">${{r.acc}}</td>
                         <td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">${{r.dec}}</td>
                         <td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">${{r.una}}</td>
@@ -472,7 +491,7 @@ def render_card(results, subtitle_suffix=""):
 top_col1, top_col2 = st.columns([2, 8])
 
 with top_col1:
-    if st.button("🔄 Refresh Data"):
+    if st.button("🔄 Force Refresh Data"):
         st.cache_data.clear()
         st.rerun()
 
