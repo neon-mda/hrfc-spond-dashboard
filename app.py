@@ -187,3 +187,346 @@ async def _fetch_spond_data_async():
             ev_id = next_ev.get("id")
             detailed_ev = next_ev
             if ev_id:
+                try:
+                    async with client.clientsession.get(
+                        f"https://api.spond.com/core/v1/sponds/{ev_id}", headers=headers
+                    ) as resp:
+                        if resp.status == 200:
+                            detailed_ev = await resp.json()
+                except Exception:
+                    pass
+
+            stats = calculate_attendance(detailed_ev)
+            results.append({
+                "label": label,
+                "lead": lead,
+                "category": category,
+                "team_rank": CUSTOM_TEAM_ORDER.get(label, 999),
+                "event_time": ev_time,
+                "acc": stats["acc"],
+                "dec": stats["dec"],
+                "una": stats["una"],
+                "total": stats["total"],
+                "rate": stats["rate"],
+                "rate_str": stats["rate_str"],
+            })
+
+    finally:
+        if client.clientsession:
+            await client.clientsession.close()
+
+    results.sort(key=lambda r: r["rate"], reverse=True)
+    return results
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_all_spond_data():
+    return asyncio.run(_fetch_spond_data_async())
+
+
+def render_card(results, subtitle_suffix=""):
+    uk_tz = ZoneInfo("Europe/London")
+    uk_now = datetime.now(uk_tz)
+    timestamp = uk_now.strftime("As at %d %b %Y, %H:%M")
+
+    valid_dates = [r["event_time"].astimezone(uk_tz) for r in results if r.get("event_time") is not None]
+    unique_date_strs = sorted(list({dt.strftime("%a %d %b").upper() for dt in valid_dates}), key=lambda d: datetime.strptime(d, "%a %d %b")) if valid_dates else []
+
+    if len(unique_date_strs) == 1:
+        card_title = f"{unique_date_strs[0]} - HRFC TEAM SPOND RESPONSE RATES"
+    elif len(unique_date_strs) == 2:
+        card_title = f"{unique_date_strs[0]} & {unique_date_strs[1]} - HRFC TEAM SPOND RESPONSE RATES"
+    elif len(unique_date_strs) > 2:
+        card_title = f"{unique_date_strs[0]} to {unique_date_strs[-1]} - HRFC TEAM SPOND RESPONSE RATES"
+    else:
+        card_title = "HRFC TEAM SPOND RESPONSE RATES"
+
+    logo_img_tag = ""
+    if LOGO_IMAGE_PATH.exists():
+        with open(LOGO_IMAGE_PATH, "rb") as f:
+            b64_data = base64.b64encode(f.read()).decode("utf-8")
+            logo_img_tag = f'<img src="data:image/png;base64,{b64_data}" style="height: 64px; width: auto; object-fit: contain;">'
+
+    subtitle = f"Upcoming Fixtures & Sessions &bull; {timestamp}"
+    if subtitle_suffix:
+        subtitle = f"{subtitle_suffix} &bull; {timestamp}"
+
+    data_payload = [{
+        "lead": r["lead"],
+        "label": r["label"],
+        "team_rank": int(r.get("team_rank", 999)),
+        "acc": int(r["acc"]),
+        "dec": int(r["dec"]),
+        "una": int(r["una"]),
+        "total": int(r.get("total", r["acc"] + r["dec"] + r["una"])),
+        "rate": float(r["rate"]),
+        "rate_str": r["rate_str"]
+    } for r in results]
+
+    data_payload.sort(key=lambda x: x["rate"], reverse=True)
+    data_json = json.dumps(data_payload)
+
+    template = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+        <style>
+            * { box-sizing: border-box; font-family: "Poppins", sans-serif; margin: 0; padding: 0; }
+            body { background-color: transparent; padding: 4px; }
+            .card {
+                background-color: #1C0304;
+                border: 1px solid rgba(130, 28, 52, 0.4);
+                border-radius: 16px;
+                padding: 18px 16px;
+                width: fit-content;
+                max-width: 100%;
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            }
+            .header-container {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 16px;
+                margin-bottom: 14px;
+            }
+            .table-container {
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                border-radius: 8px;
+                scrollbar-color: rgba(255, 255, 255, 0.45) #1C0304;
+                scrollbar-width: thin;
+            }
+            .table-container::-webkit-scrollbar {
+                height: 6px;
+            }
+            .table-container::-webkit-scrollbar-track {
+                background: #1C0304;
+                border-radius: 4px;
+            }
+            .table-container::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.45);
+                border-radius: 4px;
+            }
+            table {
+                width: 100%;
+                border-collapse: separate;
+                border-spacing: 0;
+                min-width: 640px;
+            }
+            th {
+                color: #FFE602;
+                font-size: 11px;
+                font-weight: 700;
+                padding: 8px 14px;
+                cursor: pointer;
+                user-select: none;
+                transition: color 0.15s ease;
+                white-space: nowrap;
+                pointer-events: auto;
+            }
+            th:hover {
+                color: #FFFFFF;
+            }
+            th .sort-icon {
+                font-size: 9px;
+                margin-left: 4px;
+                opacity: 0.35;
+            }
+            th.active .sort-icon {
+                opacity: 1;
+                color: #FFFFFF;
+            }
+            .sticky-col-lead {
+                position: sticky;
+                left: 0;
+                width: 90px;
+                min-width: 90px;
+                max-width: 90px;
+                z-index: 2;
+                padding: 8px 12px !important;
+                text-align: left;
+            }
+            .sticky-col-team {
+                position: sticky;
+                left: 90px;
+                width: 180px;
+                min-width: 180px;
+                max-width: 180px;
+                z-index: 2;
+                box-shadow: 3px 0 5px rgba(0, 0, 0, 0.35);
+                text-align: left;
+            }
+            th.sticky-col-lead, th.sticky-col-team {
+                background-color: #1C0304;
+                z-index: 3;
+            }
+            .team-total {
+                color: #F3C5CE;
+                font-weight: 500;
+                font-size: 11px;
+                margin-left: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="header-container">
+                <div>
+                    <div style="color: #FFE602; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2;">
+                        __CARD_TITLE__
+                    </div>
+                    <div style="color: #F3C5CE; font-size: 11px; font-weight: 500; margin-top: 4px;">
+                        __SUBTITLE__
+                    </div>
+                </div>
+                <div>__LOGO_IMG__</div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr style="border: none;">
+                            <th id="th-lead" class="sticky-col-lead" onclick="sortBy('lead')">LEAD <span class="sort-icon">▲▼</span></th>
+                            <th id="th-team" class="sticky-col-team" onclick="sortBy('team_rank')">TEAM <span class="sort-icon">▲▼</span></th>
+                            <th id="th-acc" style="text-align: center;" onclick="sortBy('acc')">ACCEPTED <span class="sort-icon">▲▼</span></th>
+                            <th id="th-dec" style="text-align: center;" onclick="sortBy('dec')">DECLINED <span class="sort-icon">▲▼</span></th>
+                            <th id="th-una" style="text-align: center;" onclick="sortBy('una')">NO RESPONSE <span class="sort-icon">▲▼</span></th>
+                            <th id="th-rate" class="active" style="text-align: right;" onclick="sortBy('rate')">% RESPONDED <span class="sort-icon">▼</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <script>
+            let rowsData = __DATA_JSON__;
+            let currentSortKey = 'rate';
+            let isAsc = false;
+
+            function renderRows() {
+                const tbody = document.getElementById('table-body');
+                tbody.innerHTML = '';
+                rowsData.forEach((r, idx) => {
+                    const bgColour = (idx % 2 === 0) ? '#821C34' : '#1C0304';
+                    const rateColor = r.rate >= 70 ? '#10B981' : (r.rate >= 50 ? '#F59E0B' : '#EF4444');
+                    
+                    const tr = document.createElement('tr');
+                    tr.style.backgroundColor = bgColour;
+                    tr.style.border = 'none';
+                    tr.style.whiteSpace = 'nowrap';
+                    tr.innerHTML = `
+                        <td class="sticky-col-lead" style="background-color: ${bgColour}; padding: 8px 12px; text-align: left; font-weight: 600; color: #F3C5CE; font-size: 13px;">${r.lead}</td>
+                        <td class="sticky-col-team" style="background-color: ${bgColour}; padding: 8px 14px; text-align: left; font-weight: 700; color: #FFFFFF; font-size: 13px;">
+                            ${r.label} <span class="team-total">(${r.total})</span>
+                        </td>
+                        <td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">${r.acc}</td>
+                        <td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">${r.dec}</td>
+                        <td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">${r.una}</td>
+                        <td style="padding: 8px 14px; text-align: right; font-weight: 700; color: ${rateColor}; font-size: 13px;">${r.rate_str}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            function sortBy(key) {
+                if (currentSortKey === key) {
+                    isAsc = !isAsc;
+                } else {
+                    currentSortKey = key;
+                    isAsc = false;
+                }
+
+                rowsData.sort((a, b) => {
+                    let valA = a[key];
+                    let valB = b[key];
+                    
+                    if (typeof valA === 'string') {
+                        return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                    }
+                    return isAsc ? (Number(valA) - Number(valB)) : (Number(valB) - Number(valA));
+                });
+
+                const headerMap = {
+                    'lead': 'th-lead',
+                    'team_rank': 'th-team',
+                    'acc': 'th-acc',
+                    'dec': 'th-dec',
+                    'una': 'th-una',
+                    'rate': 'th-rate'
+                };
+
+                Object.values(headerMap).forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.classList.remove('active');
+                        const icon = el.querySelector('.sort-icon');
+                        if (icon) icon.textContent = '▲▼';
+                    }
+                });
+
+                const activeTh = document.getElementById(headerMap[key]);
+                if (activeTh) {
+                    activeTh.classList.add('active');
+                    const icon = activeTh.querySelector('.sort-icon');
+                    if (icon) icon.textContent = isAsc ? '▲' : '▼';
+                }
+
+                renderRows();
+            }
+
+            renderRows();
+        </script>
+    </body>
+    </html>
+    """
+
+    card_html = (
+        template
+        .replace("__CARD_TITLE__", card_title)
+        .replace("__SUBTITLE__", subtitle)
+        .replace("__LOGO_IMG__", logo_img_tag)
+        .replace("__DATA_JSON__", data_json)
+    )
+
+    card_height = 200 + (len(results) * 44)
+    components.html(card_html, height=card_height, scrolling=False)
+
+
+# Controls & Layout
+top_col1, top_col2 = st.columns([2, 8])
+
+with top_col1:
+    if st.button("🔄 Force Refresh Data"):
+        st.cache_data.clear()
+        st.rerun()
+
+with top_col2:
+    view_choice = st.segmented_control(
+        "Section",
+        options=["All Teams", "Minis (U6–U12)", "Juniors (U13+ & Warriors)"],
+        default="All Teams",
+        label_visibility="collapsed",
+    )
+    if not view_choice:
+        view_choice = "All Teams"
+
+with st.spinner("Fetching latest Spond response data..."):
+    all_data = load_all_spond_data()
+
+if all_data:
+    if view_choice == "Minis (U6–U12)":
+        filtered_data = [d for d in all_data if d["category"] == "minis"]
+        suffix = "Minis Section (U6–U12)"
+    elif view_choice == "Juniors (U13+ & Warriors)":
+        filtered_data = [d for d in all_data if d["category"] == "juniors_youth"]
+        suffix = "Juniors Section (U13+ & Warriors)"
+    else:
+        filtered_data = all_data
+        suffix = "All Teams"
+
+    render_card(filtered_data, subtitle_suffix=suffix)
