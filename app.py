@@ -221,57 +221,62 @@ def load_all_spond_data():
 def get_dynamic_card_title(results, view_category):
     uk_tz = ZoneInfo("Europe/London")
 
-    # Minis only view: filter to upcoming Sunday dates (or whatever upcoming date Minis have)
+    # Minis view: Earliest upcoming event date for Minis (Sunday)
     if view_category == "minis":
         minis_dates = [
             r["event_time"].astimezone(uk_tz)
             for r in results
-            if r.get("category") == "minis" and r.get("event_time") is not None
+            if r.get("event_time") is not None
         ]
         if minis_dates:
-            minis_dates.sort()
-            earliest = minis_dates[0].strftime("%a %d %b").upper()
+            earliest = min(minis_dates).strftime("%a %d %b").upper()
             return f"{earliest} - HRFC TEAM SPOND RESPONSE RATES"
         return "HRFC TEAM SPOND RESPONSE RATES"
 
-    # Juniors only view: filter to upcoming Wednesday or Sunday dates
+    # Juniors view: Target the NEXT fixture/training session date (Wednesday if scheduled, otherwise Sunday)
     if view_category == "juniors_youth":
         juniors_dates = [
             r["event_time"].astimezone(uk_tz)
             for r in results
-            if r.get("category") == "juniors_youth" and r.get("event_time") is not None
+            if r.get("event_time") is not None
         ]
         if juniors_dates:
-            juniors_dates.sort()
-            # Capture distinct upcoming dates for juniors
-            seen = []
-            for d in juniors_dates:
-                f = d.strftime("%a %d %b").upper()
-                if f not in seen:
-                    seen.append(f)
-            if len(seen) == 1:
-                return f"{seen[0]} - HRFC TEAM SPOND RESPONSE RATES"
-            return f"{seen[0]} & {seen[1]} - HRFC TEAM SPOND RESPONSE RATES"
+            earliest = min(juniors_dates).strftime("%a %d %b").upper()
+            return f"{earliest} - HRFC TEAM SPOND RESPONSE RATES"
         return "HRFC TEAM SPOND RESPONSE RATES"
 
-    # All Teams (No filter): resolve distinct dates across all squads
-    valid_dates = [r["event_time"].astimezone(uk_tz) for r in results if r.get("event_time") is not None]
-    if not valid_dates:
+    # All Teams view: Collect earliest date per section
+    minis_dates = [
+        r["event_time"].astimezone(uk_tz)
+        for r in results
+        if r.get("category") == "minis" and r.get("event_time") is not None
+    ]
+    juniors_dates = [
+        r["event_time"].astimezone(uk_tz)
+        for r in results
+        if r.get("category") == "juniors_youth" and r.get("event_time") is not None
+    ]
+
+    dates_to_combine = []
+    if juniors_dates:
+        dates_to_combine.append(min(juniors_dates))
+    if minis_dates:
+        dates_to_combine.append(min(minis_dates))
+
+    if not dates_to_combine:
         return "HRFC TEAM SPOND RESPONSE RATES"
 
-    valid_dates.sort()
-    unique_dates = []
-    for d in valid_dates:
-        f = d.strftime("%a %d %b").upper()
-        if f not in unique_dates:
-            unique_dates.append(f)
+    dates_to_combine.sort()
+    unique_date_strs = []
+    for d in dates_to_combine:
+        formatted = d.strftime("%a %d %b").upper()
+        if formatted not in unique_date_strs:
+            unique_date_strs.append(formatted)
 
-    if len(unique_dates) == 1:
-        date_header = unique_dates[0]
-    elif len(unique_dates) == 2:
-        date_header = f"{unique_dates[0]} & {unique_dates[1]}"
+    if len(unique_date_strs) == 1:
+        date_header = unique_date_strs[0]
     else:
-        date_header = f"{unique_dates[0]} & {unique_dates[-1]}"
+        date_header = f"{unique_date_strs[0]} & {unique_date_strs[1]}"
 
     return f"{date_header} - HRFC TEAM SPOND RESPONSE RATES"
 
