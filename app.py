@@ -224,22 +224,37 @@ def load_all_spond_data():
     return asyncio.run(_fetch_spond_data_async())
 
 
+def get_dynamic_card_title(results):
+    uk_tz = ZoneInfo("Europe/London")
+    
+    # Collect unique dates sorted chronologically
+    dates = [r["event_time"].astimezone(uk_tz) for r in results if r.get("event_time") is not None]
+    if not dates:
+        return "HRFC TEAM SPOND RESPONSE RATES"
+
+    dates.sort()
+    unique_date_strs = []
+    for d in dates:
+        formatted = d.strftime("%a %d %b").upper()
+        if formatted not in unique_date_strs:
+            unique_date_strs.append(formatted)
+
+    if len(unique_date_strs) == 1:
+        date_header = unique_date_strs[0]
+    elif len(unique_date_strs) == 2:
+        date_header = f"{unique_date_strs[0]} & {unique_date_strs[1]}"
+    else:
+        date_header = f"{unique_date_strs[0]} - {unique_date_strs[-1]}"
+
+    return f"{date_header} - HRFC TEAM SPOND RESPONSE RATES"
+
+
 def render_card(results, subtitle_suffix=""):
     uk_tz = ZoneInfo("Europe/London")
     uk_now = datetime.now(uk_tz)
     timestamp = uk_now.strftime("As at %d %b %Y, %H:%M")
 
-    valid_dates = [r["event_time"].astimezone(uk_tz) for r in results if r.get("event_time") is not None]
-    unique_date_strs = sorted(list({dt.strftime("%a %d %b").upper() for dt in valid_dates}), key=lambda d: datetime.strptime(d, "%a %d %b")) if valid_dates else []
-
-    if len(unique_date_strs) == 1:
-        card_title = f"{unique_date_strs[0]} - HRFC TEAM SPOND RESPONSE RATES"
-    elif len(unique_date_strs) == 2:
-        card_title = f"{unique_date_strs[0]} & {unique_date_strs[1]} - HRFC TEAM SPOND RESPONSE RATES"
-    elif len(unique_date_strs) > 2:
-        card_title = f"{unique_date_strs[0]} to {unique_date_strs[-1]} - HRFC TEAM SPOND RESPONSE RATES"
-    else:
-        card_title = "HRFC TEAM SPOND RESPONSE RATES"
+    card_title = get_dynamic_card_title(results)
 
     logo_img_tag = ""
     if LOGO_IMAGE_PATH.exists():
