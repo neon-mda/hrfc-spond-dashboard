@@ -1,6 +1,7 @@
 import asyncio
 import base64
 from datetime import datetime, timezone
+import json
 import os
 from pathlib import Path
 import re
@@ -137,6 +138,7 @@ async def _fetch_spond_data_async():
                     "label": label,
                     "lead": lead,
                     "category": category,
+                    "team_rank": CUSTOM_TEAM_ORDER.get(label, 999),
                     "event_time": None,
                     "acc": 0,
                     "dec": 0,
@@ -162,6 +164,7 @@ async def _fetch_spond_data_async():
                     "label": label,
                     "lead": lead,
                     "category": category,
+                    "team_rank": CUSTOM_TEAM_ORDER.get(label, 999),
                     "event_time": None,
                     "acc": 0,
                     "dec": 0,
@@ -189,6 +192,7 @@ async def _fetch_spond_data_async():
                 "label": label,
                 "lead": lead,
                 "category": category,
+                "team_rank": CUSTOM_TEAM_ORDER.get(label, 999),
                 "event_time": ev_time,
                 "acc": stats["acc"],
                 "dec": stats["dec"],
@@ -210,25 +214,6 @@ def load_all_spond_data():
     return asyncio.run(_fetch_spond_data_async())
 
 
-def sort_results(data, sort_key, order_ascending):
-    if sort_key == "label":
-        return sorted(
-            data,
-            key=lambda x: CUSTOM_TEAM_ORDER.get(x["label"], 999),
-            reverse=not order_ascending,
-        )
-    elif sort_key == "lead":
-        return sorted(data, key=lambda x: x["lead"].lower(), reverse=not order_ascending)
-    elif sort_key == "acc":
-        return sorted(data, key=lambda x: x["acc"], reverse=not order_ascending)
-    elif sort_key == "dec":
-        return sorted(data, key=lambda x: x["dec"], reverse=not order_ascending)
-    elif sort_key == "una":
-        return sorted(data, key=lambda x: x["una"], reverse=not order_ascending)
-    else:  # default: rate
-        return sorted(data, key=lambda x: x["rate"], reverse=not order_ascending)
-
-
 def render_card(results, subtitle_suffix=""):
     uk_tz = ZoneInfo("Europe/London")
     uk_now = datetime.now(uk_tz)
@@ -248,137 +233,230 @@ def render_card(results, subtitle_suffix=""):
             b64_data = base64.b64encode(f.read()).decode("utf-8")
             logo_img_tag = f'<img src="data:image/png;base64,{b64_data}" style="height: 64px; width: auto; object-fit: contain;">'
 
-    rows_html = ""
-    for idx, r in enumerate(results):
-        rate_val = r["rate"]
-        rate_color = "#10B981" if rate_val >= 70 else ("#F59E0B" if rate_val >= 50 else "#EF4444")
-        bg_colour = "#821C34" if idx % 2 == 0 else "#1C0304"
-
-        rows_html += (
-            f'<tr style="background-color: {bg_colour}; border: none; white-space: nowrap;">'
-            f'<td class="sticky-col-lead" style="background-color: {bg_colour}; padding: 8px 12px; text-align: left; font-weight: 600; color: #F3C5CE; font-size: 13px;">{r["lead"]}</td>'
-            f'<td class="sticky-col-team" style="background-color: {bg_colour}; padding: 8px 14px; text-align: left; font-weight: 700; color: #FFFFFF; font-size: 13px;">{r["label"]}</td>'
-            f'<td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">{r["acc"]}</td>'
-            f'<td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">{r["dec"]}</td>'
-            f'<td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">{r["una"]}</td>'
-            f'<td style="padding: 8px 14px; text-align: right; font-weight: 700; color: {rate_color}; font-size: 13px;">{r["rate_str"]}</td>'
-            f'</tr>'
-        )
-
     subtitle = f"Upcoming Fixtures & Sessions &bull; {timestamp}"
     if subtitle_suffix:
         subtitle = f"{subtitle_suffix} &bull; {timestamp}"
 
-    card_html = (
-        f'<!DOCTYPE html>'
-        f'<html>'
-        f'<head>'
-        f'<meta name="viewport" content="width=device-width, initial-scale=1.0">'
-        f'<link rel="preconnect" href="https://fonts.googleapis.com">'
-        f'<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
-        f'<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">'
-        f'<style>'
-        f'* {{ box-sizing: border-box; font-family: "Poppins", sans-serif; margin: 0; padding: 0; }}'
-        f'body {{ background-color: transparent; padding: 4px; }}'
-        f'.card {{'
-        f'background-color: #1C0304;'
-        f'border: 1px solid rgba(130, 28, 52, 0.4);'
-        f'border-radius: 16px;'
-        f'padding: 18px 16px;'
-        f'width: fit-content;'
-        f'max-width: 100%;'
-        f'box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);'
-        f'}}'
-        f'.header-container {{'
-        f'display: flex;'
-        f'justify-content: space-between;'
-        f'align-items: center;'
-        f'gap: 16px;'
-        f'margin-bottom: 14px;'
-        f'}}'
-        f'.table-container {{'
-        f'width: 100%;'
-        f'overflow-x: auto;'
-        f'-webkit-overflow-scrolling: touch;'
-        f'border-radius: 8px;'
-        f'scrollbar-color: rgba(255, 255, 255, 0.45) #1C0304;'
-        f'scrollbar-width: thin;'
-        f'}}'
-        f'.table-container::-webkit-scrollbar {{'
-        f'height: 6px;'
-        f'}}'
-        f'.table-container::-webkit-scrollbar-track {{'
-        f'background: #1C0304;'
-        f'border-radius: 4px;'
-        f'}}'
-        f'.table-container::-webkit-scrollbar-thumb {{'
-        f'background: rgba(255, 255, 255, 0.45);'
-        f'border-radius: 4px;'
-        f'}}'
-        f'.table-container::-webkit-scrollbar-thumb:hover {{'
-        f'background: rgba(255, 255, 255, 0.7);'
-        f'}}'
-        f'table {{'
-        f'width: 100%;'
-        f'border-collapse: separate;'
-        f'border-spacing: 0;'
-        f'min-width: 620px;'
-        f'}}'
-        f'.sticky-col-lead {{'
-        f'position: sticky;'
-        f'left: 0;'
-        f'width: 90px;'
-        f'min-width: 90px;'
-        f'max-width: 90px;'
-        f'z-index: 2;'
-        f'}}'
-        f'.sticky-col-team {{'
-        f'position: sticky;'
-        f'left: 90px;'
-        f'width: 150px;'
-        f'min-width: 150px;'
-        f'max-width: 150px;'
-        f'z-index: 2;'
-        f'box-shadow: 3px 0 5px rgba(0, 0, 0, 0.35);'
-        f'}}'
-        f'th.sticky-col-lead, th.sticky-col-team {{'
-        f'background-color: #1C0304;'
-        f'z-index: 3;'
-        f'}}'
-        f'</style>'
-        f'</head>'
-        f'<body>'
-        f'<div class="card">'
-        f'<div class="header-container">'
-        f'<div>'
-        f'<div style="color: #FFE602; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2;">'
-        f'{card_title}'
-        f'</div>'
-        f'<div style="color: #F3C5CE; font-size: 11px; font-weight: 500; margin-top: 4px;">'
-        f'{subtitle}'
-        f'</div>'
-        f'</div>'
-        f'<div>{logo_img_tag}</div>'
-        f'</div>'
-        f'<div class="table-container">'
-        f'<table>'
-        f'<thead>'
-        f'<tr style="border: none; white-space: nowrap;">'
-        f'<th class="sticky-col-lead" style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: left; padding: 8px 12px;">LEAD</th>'
-        f'<th class="sticky-col-team" style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: left; padding: 8px 14px;">TEAM</th>'
-        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: center; padding: 8px 14px;">ACCEPTED</th>'
-        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: center; padding: 8px 14px;">DECLINED</th>'
-        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: center; padding: 8px 14px;">NO RESPONSE</th>'
-        f'<th style="color: #FFE602; font-size: 11px; font-weight: 700; text-align: right; padding: 8px 14px;">% RESPONDED</th>'
-        f'</tr>'
-        f'</thead>'
-        f'<tbody>{rows_html}</tbody>'
-        f'</table>'
-        f'</div>'
-        f'</div>'
-        f'</body>'
-        f'</html>'
-    )
+    # Prepare JSON data payload for frontend sorting
+    data_json = json.dumps([{
+        "lead": r["lead"],
+        "label": r["label"],
+        "team_rank": r.get("team_rank", 999),
+        "acc": r["acc"],
+        "dec": r["dec"],
+        "una": r["una"],
+        "rate": r["rate"],
+        "rate_str": r["rate_str"]
+    } for r in results])
+
+    card_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+        <style>
+            * {{ box-sizing: border-box; font-family: "Poppins", sans-serif; margin: 0; padding: 0; }}
+            body {{ background-color: transparent; padding: 4px; }}
+            .card {{
+                background-color: #1C0304;
+                border: 1px solid rgba(130, 28, 52, 0.4);
+                border-radius: 16px;
+                padding: 18px 16px;
+                width: fit-content;
+                max-width: 100%;
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            }}
+            .header-container {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 16px;
+                margin-bottom: 14px;
+            }}
+            .table-container {{
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                border-radius: 8px;
+                scrollbar-color: rgba(255, 255, 255, 0.45) #1C0304;
+                scrollbar-width: thin;
+            }}
+            .table-container::-webkit-scrollbar {{
+                height: 6px;
+            }}
+            .table-container::-webkit-scrollbar-track {{
+                background: #1C0304;
+                border-radius: 4px;
+            }}
+            .table-container::-webkit-scrollbar-thumb {{
+                background: rgba(255, 255, 255, 0.45);
+                border-radius: 4px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: separate;
+                border-spacing: 0;
+                min-width: 620px;
+            }}
+            th {{
+                color: #FFE602;
+                font-size: 11px;
+                font-weight: 700;
+                padding: 8px 14px;
+                cursor: pointer;
+                user-select: none;
+                transition: color 0.15s ease;
+                white-space: nowrap;
+            }}
+            th:hover {{
+                color: #FFFFFF;
+            }}
+            th .sort-icon {{
+                font-size: 9px;
+                margin-left: 4px;
+                opacity: 0.5;
+            }}
+            th.active .sort-icon {{
+                opacity: 1;
+                color: #FFFFFF;
+            }}
+            .sticky-col-lead {{
+                position: sticky;
+                left: 0;
+                width: 90px;
+                min-width: 90px;
+                max-width: 90px;
+                z-index: 2;
+                padding: 8px 12px !important;
+                text-align: left;
+            }}
+            .sticky-col-team {{
+                position: sticky;
+                left: 90px;
+                width: 150px;
+                min-width: 150px;
+                max-width: 150px;
+                z-index: 2;
+                box-shadow: 3px 0 5px rgba(0, 0, 0, 0.35);
+                text-align: left;
+            }}
+            th.sticky-col-lead, th.sticky-col-team {{
+                background-color: #1C0304;
+                z-index: 3;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="header-container">
+                <div>
+                    <div style="color: #FFE602; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2;">
+                        {card_title}
+                    </div>
+                    <div style="color: #F3C5CE; font-size: 11px; font-weight: 500; margin-top: 4px;">
+                        {subtitle}
+                    </div>
+                </div>
+                <div>{logo_img_tag}</div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr style="border: none;">
+                            <th id="th-lead" class="sticky-col-lead" onclick="sortBy('lead')">LEAD <span class="sort-icon">▲▼</span></th>
+                            <th id="th-team" class="sticky-col-team" onclick="sortBy('team_rank')">TEAM <span class="sort-icon">▲▼</span></th>
+                            <th id="th-acc" style="text-align: center;" onclick="sortBy('acc')">ACCEPTED <span class="sort-icon">▲▼</span></th>
+                            <th id="th-dec" style="text-align: center;" onclick="sortBy('dec')">DECLINED <span class="sort-icon">▲▼</span></th>
+                            <th id="th-una" style="text-align: center;" onclick="sortBy('una')">NO RESPONSE <span class="sort-icon">▲▼</span></th>
+                            <th id="th-rate" class="active" style="text-align: right;" onclick="sortBy('rate')">% RESPONDED <span class="sort-icon">▼</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <script>
+            let data = {data_json};
+            let currentSortKey = 'rate';
+            let isAsc = false;
+
+            function renderRows() {{
+                const tbody = document.getElementById('table-body');
+                tbody.innerHTML = '';
+                data.forEach((r, idx) => {{
+                    const bgColour = (idx % 2 === 0) ? '#821C34' : '#1C0304';
+                    const rateColor = r.rate >= 70 ? '#10B981' : (r.rate >= 50 ? '#F59E0B' : '#EF4444');
+                    
+                    const tr = document.createElement('tr');
+                    tr.style.backgroundColor = bgColour;
+                    tr.style.border = 'none';
+                    tr.style.whiteSpace = 'nowrap';
+                    tr.innerHTML = `
+                        <td class="sticky-col-lead" style="background-color: ${{bgColour}}; padding: 8px 12px; text-align: left; font-weight: 600; color: #F3C5CE; font-size: 13px;">${{r.lead}}</td>
+                        <td class="sticky-col-team" style="background-color: ${{bgColour}}; padding: 8px 14px; text-align: left; font-weight: 700; color: #FFFFFF; font-size: 13px;">${{r.label}}</td>
+                        <td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">${{r.acc}}</td>
+                        <td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">${{r.dec}}</td>
+                        <td style="padding: 8px 14px; text-align: center; color: #FFFFFF; font-size: 13px;">${{r.una}}</td>
+                        <td style="padding: 8px 14px; text-align: right; font-weight: 700; color: ${{rateColor}}; font-size: 13px;">${{r.rate_str}}</td>
+                    `;
+                    tbody.appendChild(tr);
+                }});
+            }}
+
+            function sortBy(key) {{
+                if (currentSortKey === key) {{
+                    isAsc = !isAsc;
+                }} else {{
+                    currentSortKey = key;
+                    isAsc = (key === 'lead' || key === 'team_rank') ? true : false;
+                }}
+
+                data.sort((a, b) => {{
+                    let valA = a[key];
+                    let valB = b[key];
+                    if (typeof valA === 'string') {{
+                        return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                    }}
+                    return isAsc ? valA - valB : valB - valA;
+                }});
+
+                // Update Header UI icons
+                const headerMap = {{
+                    'lead': 'th-lead',
+                    'team_rank': 'th-team',
+                    'acc': 'th-acc',
+                    'dec': 'th-dec',
+                    'una': 'th-una',
+                    'rate': 'th-rate'
+                }};
+
+                Object.values(headerMap).forEach(id => {{
+                    const el = document.getElementById(id);
+                    if (el) {{
+                        el.classList.remove('active');
+                        el.querySelector('.sort-icon').textContent = '▲▼';
+                    }}
+                }});
+
+                const activeTh = document.getElementById(headerMap[key]);
+                if (activeTh) {{
+                    activeTh.classList.add('active');
+                    activeTh.querySelector('.sort-icon').textContent = isAsc ? '▲' : '▼';
+                }}
+
+                renderRows();
+            }}
+
+            // Initial render
+            renderRows();
+        </script>
+    </body>
+    </html>
+    """
 
     card_height = 200 + (len(results) * 44)
     components.html(card_html, height=card_height, scrolling=False)
@@ -402,31 +480,6 @@ with top_col2:
     if not view_choice:
         view_choice = "All Teams"
 
-# Sorting controls
-sort_col1, sort_col2 = st.columns([3, 2])
-with sort_col1:
-    sort_label_map = {
-        "% Responded": "rate",
-        "Team (Age Grade Order)": "label",
-        "Lead Name": "lead",
-        "Accepted": "acc",
-        "Declined": "dec",
-        "No Response": "una",
-    }
-    selected_sort_label = st.selectbox("Sort by", options=list(sort_label_map.keys()), index=0)
-    sort_key = sort_label_map[selected_sort_label]
-
-with sort_col2:
-    if sort_key == "label":
-        order_options = ["U6 → U16", "U16 → U6"]
-    elif sort_key == "lead":
-        order_options = ["A → Z", "Z → A"]
-    else:
-        order_options = ["High → Low", "Low → High"]
-
-    selected_order = st.selectbox("Order", options=order_options, index=0)
-    is_ascending = selected_order in ["A → Z", "Low → High", "U6 → U16"]
-
 with st.spinner("Fetching latest Spond response data..."):
     all_data = load_all_spond_data()
 
@@ -441,5 +494,4 @@ if all_data:
         filtered_data = all_data
         suffix = "All Teams"
 
-    sorted_data = sort_results(filtered_data, sort_key, is_ascending)
-    render_card(sorted_data, subtitle_suffix=suffix)
+    render_card(filtered_data, subtitle_suffix=suffix)
