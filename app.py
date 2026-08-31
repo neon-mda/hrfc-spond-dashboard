@@ -1,6 +1,6 @@
 import asyncio
 import base64
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -218,67 +218,29 @@ def load_all_spond_data():
     return asyncio.run(_fetch_spond_data_async())
 
 
+def get_next_weekday(dt, target_weekday):
+    days_ahead = (target_weekday - dt.weekday()) % 7
+    if days_ahead == 0 and dt.hour >= 21:
+        days_ahead = 7
+    return dt + timedelta(days=days_ahead)
+
+
 def get_dynamic_card_title(results, view_category):
     uk_tz = ZoneInfo("Europe/London")
+    now_uk = datetime.now(uk_tz)
 
-    # Minis view: Earliest upcoming event date for Minis (Sunday)
+    # Next Wednesday = weekday 2, Next Sunday = weekday 6
+    next_wed = get_next_weekday(now_uk, 2).strftime("%a %d %b").upper()
+    next_sun = get_next_weekday(now_uk, 6).strftime("%a %d %b").upper()
+
     if view_category == "minis":
-        minis_dates = [
-            r["event_time"].astimezone(uk_tz)
-            for r in results
-            if r.get("event_time") is not None
-        ]
-        if minis_dates:
-            earliest = min(minis_dates).strftime("%a %d %b").upper()
-            return f"{earliest} - HRFC TEAM SPOND RESPONSE RATES"
-        return "HRFC TEAM SPOND RESPONSE RATES"
+        return f"{next_sun} - HRFC TEAM SPOND RESPONSE RATES"
 
-    # Juniors view: Target the NEXT fixture/training session date (Wednesday if scheduled, otherwise Sunday)
     if view_category == "juniors_youth":
-        juniors_dates = [
-            r["event_time"].astimezone(uk_tz)
-            for r in results
-            if r.get("event_time") is not None
-        ]
-        if juniors_dates:
-            earliest = min(juniors_dates).strftime("%a %d %b").upper()
-            return f"{earliest} - HRFC TEAM SPOND RESPONSE RATES"
-        return "HRFC TEAM SPOND RESPONSE RATES"
+        return f"{next_wed} - HRFC TEAM SPOND RESPONSE RATES"
 
-    # All Teams view: Collect earliest date per section
-    minis_dates = [
-        r["event_time"].astimezone(uk_tz)
-        for r in results
-        if r.get("category") == "minis" and r.get("event_time") is not None
-    ]
-    juniors_dates = [
-        r["event_time"].astimezone(uk_tz)
-        for r in results
-        if r.get("category") == "juniors_youth" and r.get("event_time") is not None
-    ]
-
-    dates_to_combine = []
-    if juniors_dates:
-        dates_to_combine.append(min(juniors_dates))
-    if minis_dates:
-        dates_to_combine.append(min(minis_dates))
-
-    if not dates_to_combine:
-        return "HRFC TEAM SPOND RESPONSE RATES"
-
-    dates_to_combine.sort()
-    unique_date_strs = []
-    for d in dates_to_combine:
-        formatted = d.strftime("%a %d %b").upper()
-        if formatted not in unique_date_strs:
-            unique_date_strs.append(formatted)
-
-    if len(unique_date_strs) == 1:
-        date_header = unique_date_strs[0]
-    else:
-        date_header = f"{unique_date_strs[0]} & {unique_date_strs[1]}"
-
-    return f"{date_header} - HRFC TEAM SPOND RESPONSE RATES"
+    # All Teams: Minis on Sunday & Juniors on Wednesday
+    return f"{next_wed} & {next_sun} - HRFC TEAM SPOND RESPONSE RATES"
 
 
 def render_card(results, view_category="all", subtitle_suffix=""):
