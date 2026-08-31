@@ -529,7 +529,7 @@ def render_card(results, card_title, subtitle_suffix=""):
 top_col1, top_col2 = st.columns([2, 8])
 
 with top_col1:
-    if st.button("🔄 Force Refresh Data"):
+    if st.button("🔄 Refresh Data"):
         st.cache_data.clear()
         st.rerun()
 
