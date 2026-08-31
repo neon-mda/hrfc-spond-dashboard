@@ -1,6 +1,6 @@
 import asyncio
 import base64
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -14,20 +14,20 @@ from zoneinfo import ZoneInfo
 LOGO_IMAGE_PATH = Path("HRFC_CREST.png")
 
 TARGET_SPECS = [
-    {"label": "HRFC U6", "name": "U6", "category": "minis", "lead": "MATT"},
-    {"label": "HRFC U7", "name": "U7", "category": "minis", "lead": "NICK"},
-    {"label": "HRFC U8", "name": "U8", "category": "minis", "lead": "SARAH"},
-    {"label": "HRFC U9", "name": "U9", "category": "minis", "lead": "DEBBIE"},
-    {"label": "HRFC U10", "name": "U10", "category": "minis", "lead": "STEVE"},
-    {"label": "HRFC U11", "name": "U11", "category": "minis", "lead": "JEN"},
-    {"label": "HRFC U12", "name": "U12", "category": "minis", "lead": "HARRY"},
-    {"label": "HRFC U13", "name": "U13", "category": "juniors_youth", "lead": "COXY"},
-    {"label": "HRFC U14", "name": "U14", "category": "juniors_youth", "lead": "JONNY"},
-    {"label": "HRFC HURRICANES", "name": "HURRICANES", "category": "juniors_youth", "lead": "HELEN"},
-    {"label": "HRFC COLTS", "name": "COLTS", "category": "juniors_youth", "lead": "MARK"},
-    {"label": "WARRIORS U12", "name": "WARRIORS U12", "category": "juniors_youth", "lead": "HELEN"},
-    {"label": "WARRIORS U14", "name": "WARRIORS U14", "category": "juniors_youth", "lead": "JO"},
-    {"label": "WARRIORS U16", "name": "WARRIORS U16", "category": "juniors_youth", "lead": "HELEN"},
+    {"label": "HRFC U6", "group_name": "HRFC U6", "category": "minis", "lead": "MATT"},
+    {"label": "HRFC U7", "group_name": "HRFC U7", "category": "minis", "lead": "NICK"},
+    {"label": "HRFC U8", "group_name": "HRFC U8", "category": "minis", "lead": "SARAH"},
+    {"label": "HRFC U9", "group_name": "HRFC U9", "category": "minis", "lead": "DEBBIE"},
+    {"label": "HRFC U10", "group_name": "HRFC U10", "category": "minis", "lead": "STEVE"},
+    {"label": "HRFC U11", "group_name": "HRFC U11", "category": "minis", "lead": "JEN"},
+    {"label": "HRFC U12", "group_name": "HRFC U12", "category": "minis", "lead": "HARRY"},
+    {"label": "HRFC U13", "group_name": "HRFC U13", "category": "juniors_youth", "lead": "COXY"},
+    {"label": "HRFC U14", "group_name": "HRFC U14", "category": "juniors_youth", "lead": "JONNY"},
+    {"label": "HRFC HURRICANES", "group_name": "HRFC HURRICANES", "category": "juniors_youth", "lead": "HELEN"},
+    {"label": "HRFC COLTS", "group_name": "HRFC COLTS", "category": "juniors_youth", "lead": "MARK"},
+    {"label": "WARRIORS U12", "group_name": "WARRIORS U12", "category": "juniors_youth", "lead": "HELEN"},
+    {"label": "WARRIORS U14", "group_name": "WARRIORS U14", "category": "juniors_youth", "lead": "JO"},
+    {"label": "WARRIORS U16", "group_name": "WARRIORS U16", "category": "juniors_youth", "lead": "HELEN"},
 ]
 
 CUSTOM_TEAM_ORDER = {spec["label"]: idx for idx, spec in enumerate(TARGET_SPECS)}
@@ -51,44 +51,28 @@ def parse_utc_timestamp(val):
         return None
 
 
-def match_name(target_str, candidate_name):
-    t = clean(target_str)
-    c = clean(candidate_name)
-    if not t or not c:
-        return False
-    return t == c or t in c or c in t
-
-
-def resolve_target(groups, spec):
-    target_key = spec.get("name", "")
-    target_label = spec.get("label", "")
-
-    # 1. Direct top-level group match
+def resolve_group(groups, name):
+    norm = clean(name)
     for g in groups:
-        g_name = g.get("name", "")
-        if match_name(target_key, g_name) or match_name(target_label, g_name):
-            return g.get("id"), None
-
-    # 2. Nested subgroup match within any parent group
-    for g in groups:
-        for sg in g.get("subGroups", []):
-            sg_name = sg.get("name", "")
-            if match_name(target_key, sg_name) or match_name(target_label, sg_name):
-                return g.get("id"), sg.get("id")
-
-    return None, None
+        if clean(g.get("name")) == norm or norm in clean(g.get("name")):
+            return g
+    return None
 
 
 def get_next_event(events, now_utc):
     upcoming = []
-    today_start = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
-
     for ev in events or []:
         if ev.get("hidden") is True:
             continue
         st_time = parse_utc_timestamp(ev.get("startTimestamp"))
-        if st_time and st_time >= today_start:
+        if st_time and st_time >= now_utc:
             upcoming.append((st_time, ev))
+
+    if not upcoming:
+        for ev in events or []:
+            st_time = parse_utc_timestamp(ev.get("startTimestamp"))
+            if st_time and st_time >= now_utc:
+                upcoming.append((st_time, ev))
 
     if not upcoming:
         return None
@@ -153,7 +137,8 @@ async def _fetch_spond_data_async():
             category = spec["category"]
             lead = spec.get("lead", "")
 
-            group_id, subgroup_id = resolve_target(all_groups, spec)
+            grp = resolve_group(all_groups, spec["group_name"])
+            group_id = grp.get("id") if grp else None
 
             if not group_id:
                 results.append({
@@ -171,16 +156,15 @@ async def _fetch_spond_data_async():
                 })
                 continue
 
-            query = {"group_id": group_id, "max_events": 100}
-            if subgroup_id:
-                query["subgroup_id"] = subgroup_id
+            query = {
+                "group_id": group_id,
+                "include_scheduled": True,
+                "include_hidden": True,
+                "min_start": now_utc,
+                "max_events": 1000,
+            }
 
-            events = []
-            try:
-                events = await client.get_events(**query) or []
-            except Exception:
-                events = []
-
+            events = await client.get_events(**query) or []
             next_ev = get_next_event(events, now_utc)
 
             if not next_ev:
@@ -227,8 +211,6 @@ async def _fetch_spond_data_async():
                 "rate_str": stats["rate_str"],
             })
 
-    except Exception as e:
-        st.error(f"Error fetching data from Spond: {e}")
     finally:
         if client.clientsession:
             await client.clientsession.close()
@@ -242,35 +224,49 @@ def load_all_spond_data():
     return asyncio.run(_fetch_spond_data_async())
 
 
-def get_next_weekday(dt, target_weekday):
-    days_ahead = (target_weekday - dt.weekday()) % 7
-    if days_ahead == 0 and dt.hour >= 21:
-        days_ahead = 7
-    return dt + timedelta(days=days_ahead)
-
-
-def get_dynamic_card_title(results, view_category):
+def get_signature_title(all_data, view_choice):
     uk_tz = ZoneInfo("Europe/London")
-    now_uk = datetime.now(uk_tz)
+    
+    # Map each label to its parsed event date
+    events_by_label = {d["label"]: d["event_time"].astimezone(uk_tz) for d in all_data if d.get("event_time")}
 
-    next_wed = get_next_weekday(now_uk, 2).strftime("%a %d %b").upper()
-    next_sun = get_next_weekday(now_uk, 6).strftime("%a %d %b").upper()
+    # Signature date for Minis (HRFC U7, fallback U8, U9...)
+    minis_dt = events_by_label.get("HRFC U7")
+    if not minis_dt:
+        for lbl in ["HRFC U8", "HRFC U9", "HRFC U10", "HRFC U6", "HRFC U11", "HRFC U12"]:
+            if lbl in events_by_label:
+                minis_dt = events_by_label[lbl]
+                break
 
-    if view_category == "minis":
-        return f"{next_sun} - HRFC TEAM SPOND RESPONSE RATES"
+    # Signature date for Juniors (HRFC U14, fallback HRFC COLTS, U13...)
+    juniors_dt = events_by_label.get("HRFC U14") or events_by_label.get("HRFC COLTS")
+    if not juniors_dt:
+        for lbl in ["HRFC U13", "HRFC HURRICANES", "WARRIORS U14", "WARRIORS U16", "WARRIORS U12"]:
+            if lbl in events_by_label:
+                juniors_dt = events_by_label[lbl]
+                break
 
-    if view_category == "juniors_youth":
-        return f"{next_wed} - HRFC TEAM SPOND RESPONSE RATES"
+    minis_str = minis_dt.strftime("%a %d %b").upper() if minis_dt else None
+    juniors_str = juniors_dt.strftime("%a %d %b").upper() if juniors_dt else None
 
-    return f"{next_wed} & {next_sun} - HRFC TEAM SPOND RESPONSE RATES"
+    if view_choice == "Minis (U6–U12)":
+        return f"{minis_str or 'UPCOMING'} - HRFC TEAM SPOND RESPONSE RATES"
+    elif view_choice == "Juniors (U13+ & Warriors)":
+        return f"{juniors_str or 'UPCOMING'} - HRFC TEAM SPOND RESPONSE RATES"
+    else:  # All Teams
+        if juniors_str and minis_str and juniors_str != minis_str:
+            return f"{juniors_str} & {minis_str} - HRFC TEAM SPOND RESPONSE RATES"
+        elif juniors_str:
+            return f"{juniors_str} - HRFC TEAM SPOND RESPONSE RATES"
+        elif minis_str:
+            return f"{minis_str} - HRFC TEAM SPOND RESPONSE RATES"
+        return "HRFC TEAM SPOND RESPONSE RATES"
 
 
-def render_card(results, view_category="all", subtitle_suffix=""):
+def render_card(results, card_title, subtitle_suffix=""):
     uk_tz = ZoneInfo("Europe/London")
     uk_now = datetime.now(uk_tz)
     timestamp = uk_now.strftime("As at %d %b %Y, %H:%M")
-
-    card_title = get_dynamic_card_title(results, view_category)
 
     logo_img_tag = ""
     if LOGO_IMAGE_PATH.exists():
@@ -294,6 +290,7 @@ def render_card(results, view_category="all", subtitle_suffix=""):
         "rate_str": r["rate_str"]
     } for r in results]
 
+    # Start sorted by rate descending
     data_payload.sort(key=lambda x: x["rate"], reverse=True)
     data_json = json.dumps(data_payload)
 
@@ -552,15 +549,13 @@ with st.spinner("Fetching latest Spond response data..."):
 if all_data:
     if view_choice == "Minis (U6–U12)":
         filtered_data = [d for d in all_data if d["category"] == "minis"]
-        category_key = "minis"
         suffix = "Minis Section (U6–U12)"
     elif view_choice == "Juniors (U13+ & Warriors)":
         filtered_data = [d for d in all_data if d["category"] == "juniors_youth"]
-        category_key = "juniors_youth"
         suffix = "Juniors Section (U13+ & Warriors)"
     else:
         filtered_data = all_data
-        category_key = "all"
         suffix = "All Teams"
 
-    render_card(filtered_data, view_category=category_key, subtitle_suffix=suffix)
+    title_text = get_signature_title(all_data, view_choice)
+    render_card(filtered_data, card_title=title_text, subtitle_suffix=suffix)
