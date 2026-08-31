@@ -237,17 +237,20 @@ def render_card(results, subtitle_suffix=""):
     if subtitle_suffix:
         subtitle = f"{subtitle_suffix} &bull; {timestamp}"
 
-    # Prepare JSON data payload for frontend sorting
-    data_json = json.dumps([{
+    data_payload = [{
         "lead": r["lead"],
         "label": r["label"],
-        "team_rank": r.get("team_rank", 999),
-        "acc": r["acc"],
-        "dec": r["dec"],
-        "una": r["una"],
-        "rate": r["rate"],
+        "team_rank": int(r.get("team_rank", 999)),
+        "acc": int(r["acc"]),
+        "dec": int(r["dec"]),
+        "una": int(r["una"]),
+        "rate": float(r["rate"]),
         "rate_str": r["rate_str"]
-    } for r in results])
+    } for r in results]
+
+    # Pre-sort descending by rate by default
+    data_payload.sort(key=lambda x: x["rate"], reverse=True)
+    data_json = json.dumps(data_payload)
 
     card_html = f"""
     <!DOCTYPE html>
@@ -310,6 +313,7 @@ def render_card(results, subtitle_suffix=""):
                 user-select: none;
                 transition: color 0.15s ease;
                 white-space: nowrap;
+                pointer-events: auto;
             }}
             th:hover {{
                 color: #FFFFFF;
@@ -317,7 +321,7 @@ def render_card(results, subtitle_suffix=""):
             th .sort-icon {{
                 font-size: 9px;
                 margin-left: 4px;
-                opacity: 0.5;
+                opacity: 0.35;
             }}
             th.active .sort-icon {{
                 opacity: 1;
@@ -380,14 +384,14 @@ def render_card(results, subtitle_suffix=""):
         </div>
 
         <script>
-            let data = {data_json};
+            let rowsData = {data_json};
             let currentSortKey = 'rate';
             let isAsc = false;
 
             function renderRows() {{
                 const tbody = document.getElementById('table-body');
                 tbody.innerHTML = '';
-                data.forEach((r, idx) => {{
+                rowsData.forEach((r, idx) => {{
                     const bgColour = (idx % 2 === 0) ? '#821C34' : '#1C0304';
                     const rateColor = r.rate >= 70 ? '#10B981' : (r.rate >= 50 ? '#F59E0B' : '#EF4444');
                     
@@ -412,19 +416,19 @@ def render_card(results, subtitle_suffix=""):
                     isAsc = !isAsc;
                 }} else {{
                     currentSortKey = key;
-                    isAsc = (key === 'lead' || key === 'team_rank') ? true : false;
+                    isAsc = false; // First click always descends
                 }}
 
-                data.sort((a, b) => {{
+                rowsData.sort((a, b) => {{
                     let valA = a[key];
                     let valB = b[key];
+                    
                     if (typeof valA === 'string') {{
                         return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
                     }}
-                    return isAsc ? valA - valB : valB - valA;
+                    return isAsc ? (Number(valA) - Number(valB)) : (Number(valB) - Number(valA));
                 }});
 
-                // Update Header UI icons
                 const headerMap = {{
                     'lead': 'th-lead',
                     'team_rank': 'th-team',
@@ -438,14 +442,16 @@ def render_card(results, subtitle_suffix=""):
                     const el = document.getElementById(id);
                     if (el) {{
                         el.classList.remove('active');
-                        el.querySelector('.sort-icon').textContent = '▲▼';
+                        const icon = el.querySelector('.sort-icon');
+                        if (icon) icon.textContent = '▲▼';
                     }}
                 }});
 
                 const activeTh = document.getElementById(headerMap[key]);
                 if (activeTh) {{
                     activeTh.classList.add('active');
-                    activeTh.querySelector('.sort-icon').textContent = isAsc ? '▲' : '▼';
+                    const icon = activeTh.querySelector('.sort-icon');
+                    if (icon) icon.textContent = isAsc ? '▲' : '▼';
                 }}
 
                 renderRows();
