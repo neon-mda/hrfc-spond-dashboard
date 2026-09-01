@@ -324,15 +324,17 @@ def render_card(results, card_title, subtitle_suffix=""):
     timestamp = uk_now.strftime("As at %d %b %Y, %H:%M")
 
     logos_html = ""
+    # HRFC Crest: Scaled 125% to 80px height
     if LOGO_IMAGE_PATH.exists():
         with open(LOGO_IMAGE_PATH, "rb") as f:
             b64_hrfc = base64.b64encode(f.read()).decode("utf-8")
-            logos_html += f'<img src="data:image/png;base64,{b64_hrfc}" style="height: 64px; width: auto; object-fit: contain;">'
+            logos_html += f'<img src="data:image/png;base64,{b64_hrfc}" style="height: 80px; width: auto; object-fit: contain; display: block;">'
 
+    # Spond Logo: Scaled 125% to 60px height (maintaining 75% of HRFC crest)
     if SPOND_LOGO_PATH.exists():
         with open(SPOND_LOGO_PATH, "rb") as f:
             b64_spond = base64.b64encode(f.read()).decode("utf-8")
-            logos_html += f'<img src="data:image/png;base64,{b64_spond}" style="height: 64px; width: auto; object-fit: contain;">'
+            logos_html += f'<img src="data:image/png;base64,{b64_spond}" style="height: 60px; width: auto; object-fit: contain; display: block;">'
 
     subtitle = f"Upcoming Fixtures & Sessions &bull; {timestamp}"
     if subtitle_suffix:
@@ -381,7 +383,7 @@ def render_card(results, card_title, subtitle_suffix=""):
         '.logos-wrapper {'
         '  display: flex;'
         '  align-items: center;'
-        '  gap: 12px;'
+        '  gap: 16px;'
         '}'
         '.table-container {'
         '  width: 100%;'
