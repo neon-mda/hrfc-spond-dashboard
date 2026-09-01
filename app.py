@@ -227,10 +227,8 @@ def load_all_spond_data():
 def get_signature_title(all_data, view_choice):
     uk_tz = ZoneInfo("Europe/London")
     
-    # Map each label to its parsed event date
     events_by_label = {d["label"]: d["event_time"].astimezone(uk_tz) for d in all_data if d.get("event_time")}
 
-    # Signature date for Minis (HRFC U7, fallback U8, U9...)
     minis_dt = events_by_label.get("HRFC U7")
     if not minis_dt:
         for lbl in ["HRFC U8", "HRFC U9", "HRFC U10", "HRFC U6", "HRFC U11", "HRFC U12"]:
@@ -238,7 +236,6 @@ def get_signature_title(all_data, view_choice):
                 minis_dt = events_by_label[lbl]
                 break
 
-    # Signature date for Juniors (HRFC U14, fallback HRFC COLTS, U13...)
     juniors_dt = events_by_label.get("HRFC U14") or events_by_label.get("HRFC COLTS")
     if not juniors_dt:
         for lbl in ["HRFC U13", "HRFC HURRICANES", "WARRIORS U14", "WARRIORS U16", "WARRIORS U12"]:
@@ -253,7 +250,7 @@ def get_signature_title(all_data, view_choice):
         return f"{minis_str or 'UPCOMING'} - HRFC TEAM SPOND RESPONSE RATES"
     elif view_choice == "Juniors (U13+ & Warriors)":
         return f"{juniors_str or 'UPCOMING'} - HRFC TEAM SPOND RESPONSE RATES"
-    else:  # All Teams
+    else:
         if juniors_str and minis_str and juniors_str != minis_str:
             return f"{juniors_str} & {minis_str} - HRFC TEAM SPOND RESPONSE RATES"
         elif juniors_str:
@@ -290,7 +287,6 @@ def render_card(results, card_title, subtitle_suffix=""):
         "rate_str": r["rate_str"]
     } for r in results]
 
-    # Start sorted by rate descending
     data_payload.sort(key=lambda x: x["rate"], reverse=True)
     data_json = json.dumps(data_payload)
 
@@ -320,6 +316,30 @@ def render_card(results, card_title, subtitle_suffix=""):
                 align-items: center;
                 gap: 16px;
                 margin-bottom: 14px;
+            }
+            .header-right {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .copy-btn {
+                background-color: rgba(130, 28, 52, 0.6);
+                border: 1px solid #FFE602;
+                color: #FFE602;
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 11px;
+                font-weight: 700;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                user-select: none;
+            }
+            .copy-btn:hover {
+                background-color: #FFE602;
+                color: #1C0304;
             }
             .table-container {
                 width: 100%;
@@ -412,7 +432,12 @@ def render_card(results, card_title, subtitle_suffix=""):
                         __SUBTITLE__
                     </div>
                 </div>
-                <div>__LOGO_IMG__</div>
+                <div class="header-right">
+                    <button id="copy-button" class="copy-btn" onclick="copyTableToClipboard()">
+                        📋 Copy
+                    </button>
+                    <div>__LOGO_IMG__</div>
+                </div>
             </div>
             <div class="table-container">
                 <table>
@@ -505,6 +530,22 @@ def render_card(results, card_title, subtitle_suffix=""):
                 }
 
                 renderRows();
+            }
+
+            function copyTableToClipboard() {
+                const header = "LEAD\\tTEAM\\tACCEPTED\\tDECLINED\\tNO RESPONSE\\t% RESPONDED";
+                const rows = rowsData.map(r => 
+                    `${r.lead}\\t${r.label} (${r.total})\\t${r.acc}\\t${r.dec}\\t${r.una}\\t${r.rate_str}`
+                );
+                const textToCopy = header + "\\n" + rows.join("\\n");
+
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    const btn = document.getElementById('copy-button');
+                    btn.textContent = '✅ Copied!';
+                    setTimeout(() => {
+                        btn.textContent = '📋 Copy';
+                    }, 2000);
+                });
             }
 
             renderRows();
