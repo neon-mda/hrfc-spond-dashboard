@@ -261,76 +261,19 @@ def get_signature_title(all_data, view_choice):
         return "HRFC TEAM SPOND RESPONSE RATES"
 
 
-def render_copy_button(results):
-    sorted_results = sorted(results, key=lambda x: x["rate"], reverse=True)
-    header = "LEAD\tTEAM\tACCEPTED\tDECLINED\tNO RESPONSE\t% RESPONDED"
-    lines = [header]
-    for r in sorted_results:
-        lines.append(f"{r['lead']}\t{r['label']} ({r['total']})\t{r['acc']}\t{r['dec']}\t{r['una']}\t{r['rate_str']}")
-    
-    text_to_copy = "\n".join(lines)
-    escaped_json = json.dumps(text_to_copy)
-
-    button_html = (
-        '<!DOCTYPE html><html><head>'
-        '<link rel="preconnect" href="https://fonts.googleapis.com">'
-        '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
-        '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">'
-        '<style>'
-        '* { box-sizing: border-box; margin: 0; padding: 0; font-family: "Poppins", sans-serif; }'
-        'body { background: transparent; display: flex; align-items: center; }'
-        '.copy-btn {'
-        '  width: 100%;'
-        '  background-color: #1C0304;'
-        '  border: 1px solid rgba(130, 28, 52, 0.8);'
-        '  color: #FFE602;'
-        '  border-radius: 8px;'
-        '  padding: 6px 14px;'
-        '  font-size: 13px;'
-        '  font-weight: 600;'
-        '  cursor: pointer;'
-        '  transition: all 0.15s ease;'
-        '  display: inline-flex;'
-        '  align-items: center;'
-        '  justify-content: center;'
-        '  gap: 6px;'
-        '  user-select: none;'
-        '  height: 38px;'
-        '}'
-        '.copy-btn:hover {'
-        '  background-color: #821C34;'
-        '  color: #FFFFFF;'
-        '  border-color: #821C34;'
-        '}'
-        '</style></head><body>'
-        '<button id="copy-btn" class="copy-btn" onclick="copyData()">📋 Copy</button>'
-        '<script>'
-        'function copyData() {'
-        f'  const text = {escaped_json};'
-        '  navigator.clipboard.writeText(text).then(() => {'
-        '    const btn = document.getElementById("copy-btn");'
-        '    btn.textContent = "✅ Copied!";'
-        '    setTimeout(() => { btn.textContent = "📋 Copy"; }, 2000);'
-        '  });'
-        '}'
-        '</script></body></html>'
-    )
-    components.html(button_html, height=42, scrolling=False)
-
-
 def render_card(results, card_title, subtitle_suffix=""):
     uk_tz = ZoneInfo("Europe/London")
     uk_now = datetime.now(uk_tz)
     timestamp = uk_now.strftime("As at %d %b %Y, %H:%M")
 
     logos_html = ""
-    # HRFC Crest: Scaled 125% to 80px height
+    # HRFC Crest: 80px height
     if LOGO_IMAGE_PATH.exists():
         with open(LOGO_IMAGE_PATH, "rb") as f:
             b64_hrfc = base64.b64encode(f.read()).decode("utf-8")
             logos_html += f'<img src="data:image/png;base64,{b64_hrfc}" style="height: 80px; width: auto; object-fit: contain; display: block;">'
 
-    # Spond Logo: Scaled 125% to 60px height (maintaining 75% of HRFC crest)
+    # Spond Logo: 60px height (75% of HRFC crest)
     if SPOND_LOGO_PATH.exists():
         with open(SPOND_LOGO_PATH, "rb") as f:
             b64_spond = base64.b64encode(f.read()).decode("utf-8")
@@ -361,9 +304,11 @@ def render_card(results, card_title, subtitle_suffix=""):
         '<link rel="preconnect" href="https://fonts.googleapis.com">'
         '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
         '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">'
+        '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>'
         '<style>'
         '* { box-sizing: border-box; font-family: "Poppins", sans-serif; margin: 0; padding: 0; }'
         'body { background-color: transparent; padding: 4px; }'
+        '.card-wrapper { display: inline-block; position: relative; max-width: 100%; }'
         '.card {'
         '  background-color: #1C0304;'
         '  border: 1px solid rgba(130, 28, 52, 0.4);'
@@ -383,7 +328,32 @@ def render_card(results, card_title, subtitle_suffix=""):
         '.logos-wrapper {'
         '  display: flex;'
         '  align-items: center;'
-        '  gap: 16px;'
+        '  gap: 14px;'
+        '}'
+        '.action-row {'
+        '  display: flex;'
+        '  justify-content: flex-end;'
+        '  margin-bottom: 8px;'
+        '}'
+        '.copy-img-btn {'
+        '  background-color: #1C0304;'
+        '  border: 1px solid rgba(130, 28, 52, 0.8);'
+        '  color: #FFE602;'
+        '  border-radius: 8px;'
+        '  padding: 6px 14px;'
+        '  font-size: 13px;'
+        '  font-weight: 600;'
+        '  cursor: pointer;'
+        '  transition: all 0.15s ease;'
+        '  display: inline-flex;'
+        '  align-items: center;'
+        '  gap: 6px;'
+        '  user-select: none;'
+        '}'
+        '.copy-img-btn:hover {'
+        '  background-color: #821C34;'
+        '  color: #FFFFFF;'
+        '  border-color: #821C34;'
         '}'
         '.table-container {'
         '  width: 100%;'
@@ -434,28 +404,33 @@ def render_card(results, card_title, subtitle_suffix=""):
         'th.sticky-col-lead, th.sticky-col-team { background-color: #1C0304; z-index: 3; }'
         '.team-total { color: #F3C5CE; font-weight: 500; font-size: 11px; margin-left: 4px; }'
         '</style></head><body>'
-        '<div class="card">'
-        '  <div class="header-container">'
-        '    <div>'
-        '      <div style="color: #FFE602; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2;">__CARD_TITLE__</div>'
-        '      <div style="color: #F3C5CE; font-size: 11px; font-weight: 500; margin-top: 4px;">__SUBTITLE__</div>'
-        '    </div>'
-        '    <div class="logos-wrapper">__LOGOS_HTML__</div>'
+        '<div class="card-wrapper">'
+        '  <div class="action-row">'
+        '    <button id="copy-btn" class="copy-img-btn" onclick="copyCardAsImage()">📸 Copy as Image</button>'
         '  </div>'
-        '  <div class="table-container">'
-        '    <table>'
-        '      <thead>'
-        '        <tr style="border: none;">'
-        '          <th id="th-lead" class="sticky-col-lead" onclick="sortBy(\'lead\')">LEAD <span class="sort-icon">▲▼</span></th>'
-        '          <th id="th-team" class="sticky-col-team" onclick="sortBy(\'team_rank\')">TEAM <span class="sort-icon">▲▼</span></th>'
-        '          <th id="th-acc" style="text-align: center;" onclick="sortBy(\'acc\')">ACCEPTED <span class="sort-icon">▲▼</span></th>'
-        '          <th id="th-dec" style="text-align: center;" onclick="sortBy(\'dec\')">DECLINED <span class="sort-icon">▲▼</span></th>'
-        '          <th id="th-una" style="text-align: center;" onclick="sortBy(\'una\')">NO RESPONSE <span class="sort-icon">▲▼</span></th>'
-        '          <th id="th-rate" class="active" style="text-align: right;" onclick="sortBy(\'rate\')">% RESPONDED <span class="sort-icon">▼</span></th>'
-        '        </tr>'
-        '      </thead>'
-        '      <tbody id="table-body"></tbody>'
-        '    </table>'
+        '  <div id="target-card" class="card">'
+        '    <div class="header-container">'
+        '      <div>'
+        '        <div style="color: #FFE602; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2;">__CARD_TITLE__</div>'
+        '        <div style="color: #F3C5CE; font-size: 11px; font-weight: 500; margin-top: 4px;">__SUBTITLE__</div>'
+        '      </div>'
+        '      <div class="logos-wrapper">__LOGOS_HTML__</div>'
+        '    </div>'
+        '    <div class="table-container">'
+        '      <table>'
+        '        <thead>'
+        '          <tr style="border: none;">'
+        '            <th id="th-lead" class="sticky-col-lead" onclick="sortBy(\'lead\')">LEAD <span class="sort-icon">▲▼</span></th>'
+        '            <th id="th-team" class="sticky-col-team" onclick="sortBy(\'team_rank\')">TEAM <span class="sort-icon">▲▼</span></th>'
+        '            <th id="th-acc" style="text-align: center;" onclick="sortBy(\'acc\')">ACCEPTED <span class="sort-icon">▲▼</span></th>'
+        '            <th id="th-dec" style="text-align: center;" onclick="sortBy(\'dec\')">DECLINED <span class="sort-icon">▲▼</span></th>'
+        '            <th id="th-una" style="text-align: center;" onclick="sortBy(\'una\')">NO RESPONSE <span class="sort-icon">▲▼</span></th>'
+        '            <th id="th-rate" class="active" style="text-align: right;" onclick="sortBy(\'rate\')">% RESPONDED <span class="sort-icon">▼</span></th>'
+        '          </tr>'
+        '        </thead>'
+        '        <tbody id="table-body"></tbody>'
+        '      </table>'
+        '    </div>'
         '  </div>'
         '</div>'
         '<script>'
@@ -501,6 +476,42 @@ def render_card(results, card_title, subtitle_suffix=""):
         '  if (activeTh) { activeTh.classList.add("active"); const icon = activeTh.querySelector(".sort-icon"); if (icon) icon.textContent = isAsc ? "▲" : "▼"; }'
         '  renderRows();'
         '}'
+        'async function copyCardAsImage() {'
+        '  const btn = document.getElementById("copy-btn");'
+        '  const cardElement = document.getElementById("target-card");'
+        '  btn.textContent = "⏳ Generating...";'
+        '  try {'
+        '    const canvas = await html2canvas(cardElement, {'
+        '      backgroundColor: null,'
+        '      scale: 2,'
+        '      useCORS: true'
+        '    });'
+        '    canvas.toBlob(async (blob) => {'
+        '      if (!blob) {'
+        '        btn.textContent = "❌ Failed";'
+        '        setTimeout(() => { btn.textContent = "📸 Copy as Image"; }, 2000);'
+        '        return;'
+        '      }'
+        '      try {'
+        '        await navigator.clipboard.write(['
+        '          new ClipboardItem({ "image/png": blob })'
+        '        ]);'
+        '        btn.textContent = "✅ Image Copied!";'
+        '      } catch (err) {'
+        '        // Fallback: download if clipboard permissions are restricted'
+        '        const link = document.createElement("a");'
+        '        link.download = "HRFC_Spond_Rates.png";'
+        '        link.href = canvas.toDataURL("image/png");'
+        '        link.click();'
+        '        btn.textContent = "💾 Downloaded!";'
+        '      }'
+        '      setTimeout(() => { btn.textContent = "📸 Copy as Image"; }, 2500);'
+        '    }, "image/png");'
+        '  } catch (error) {'
+        '    btn.textContent = "❌ Error";'
+        '    setTimeout(() => { btn.textContent = "📸 Copy as Image"; }, 2000);'
+        '  }'
+        '}'
         'renderRows();'
         '</script></body></html>'
     )
@@ -512,7 +523,7 @@ def render_card(results, card_title, subtitle_suffix=""):
         .replace("__LOGOS_HTML__", logos_html)
     )
 
-    card_height = 200 + (len(results) * 44)
+    card_height = 250 + (len(results) * 44)
     components.html(card_html, height=card_height, scrolling=False)
 
 
@@ -521,9 +532,9 @@ with st.spinner("Fetching latest Spond response data..."):
     all_data = load_all_spond_data()
 
 # Controls Row
-ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([1.6, 1.4, 7.0])
+ctrl_col1, ctrl_col2 = st.columns([2.0, 8.0])
 
-with ctrl_col3:
+with ctrl_col2:
     view_choice = st.segmented_control(
         "Section",
         options=["All Teams", "Minis (U6–U12)", "Juniors (U13+ & Warriors)"],
@@ -548,9 +559,6 @@ if all_data:
         if st.button("🔄 Refresh", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
-
-    with ctrl_col2:
-        render_copy_button(filtered_data)
 
     title_text = get_signature_title(all_data, view_choice)
     render_card(filtered_data, card_title=title_text, subtitle_suffix=suffix)
