@@ -260,6 +260,72 @@ def get_signature_title(all_data, view_choice):
         return "HRFC TEAM SPOND RESPONSE RATES"
 
 
+def render_copy_button(results):
+    sorted_results = sorted(results, key=lambda x: x["rate"], reverse=True)
+    header = "LEAD\tTEAM\tACCEPTED\tDECLINED\tNO RESPONSE\t% RESPONDED"
+    lines = [header]
+    for r in sorted_results:
+        lines.append(f"{r['lead']}\t{r['label']} ({r['total']})\t{r['acc']}\t{r['dec']}\t{r['una']}\t{r['rate_str']}")
+    
+    text_to_copy = "\n".join(lines)
+    escaped_json = json.dumps(text_to_copy)
+
+    button_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+        <style>
+            * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: "Poppins", sans-serif; }}
+            body {{ background: transparent; display: flex; align-items: center; }}
+            .copy-btn {{
+                width: 100%;
+                background-color: #1C0304;
+                border: 1px solid rgba(130, 28, 52, 0.7);
+                color: #FFE602;
+                border-radius: 8px;
+                padding: 7px 12px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                user-select: none;
+            }}
+            .copy-btn:hover {{
+                background-color: #821C34;
+                color: #FFFFFF;
+                border-color: #821C34;
+            }}
+        </style>
+    </head>
+    <body>
+        <button id="copy-btn" class="copy-btn" onclick="copyData()">
+            📋 Copy Table Data
+        </button>
+        <script>
+            function copyData() {{
+                const text = {escaped_json};
+                navigator.clipboard.writeText(text).then(() => {{
+                    const btn = document.getElementById('copy-btn');
+                    btn.textContent = '✅ Copied!';
+                    setTimeout(() => {{
+                        btn.textContent = '📋 Copy Table Data';
+                    }}, 2000);
+                }});
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    components.html(button_html, height=42, scrolling=False)
+
+
 def render_card(results, card_title, subtitle_suffix=""):
     uk_tz = ZoneInfo("Europe/London")
     uk_now = datetime.now(uk_tz)
@@ -287,6 +353,7 @@ def render_card(results, card_title, subtitle_suffix=""):
         "rate_str": r["rate_str"]
     } for r in results]
 
+    # Start sorted by rate descending
     data_payload.sort(key=lambda x: x["rate"], reverse=True)
     data_json = json.dumps(data_payload)
 
@@ -316,30 +383,6 @@ def render_card(results, card_title, subtitle_suffix=""):
                 align-items: center;
                 gap: 16px;
                 margin-bottom: 14px;
-            }
-            .header-right {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-            .copy-btn {
-                background-color: rgba(130, 28, 52, 0.6);
-                border: 1px solid #FFE602;
-                color: #FFE602;
-                border-radius: 6px;
-                padding: 6px 10px;
-                font-size: 11px;
-                font-weight: 700;
-                cursor: pointer;
-                transition: all 0.15s ease;
-                display: flex;
-                align-items: center;
-                gap: 4px;
-                user-select: none;
-            }
-            .copy-btn:hover {
-                background-color: #FFE602;
-                color: #1C0304;
             }
             .table-container {
                 width: 100%;
@@ -432,12 +475,7 @@ def render_card(results, card_title, subtitle_suffix=""):
                         __SUBTITLE__
                     </div>
                 </div>
-                <div class="header-right">
-                    <button id="copy-button" class="copy-btn" onclick="copyTableToClipboard()">
-                        📋 Copy
-                    </button>
-                    <div>__LOGO_IMG__</div>
-                </div>
+                <div>__LOGO_IMG__</div>
             </div>
             <div class="table-container">
                 <table>
@@ -532,22 +570,6 @@ def render_card(results, card_title, subtitle_suffix=""):
                 renderRows();
             }
 
-            function copyTableToClipboard() {
-                const header = "LEAD\\tTEAM\\tACCEPTED\\tDECLINED\\tNO RESPONSE\\t% RESPONDED";
-                const rows = rowsData.map(r => 
-                    `${r.lead}\\t${r.label} (${r.total})\\t${r.acc}\\t${r.dec}\\t${r.una}\\t${r.rate_str}`
-                );
-                const textToCopy = header + "\\n" + rows.join("\\n");
-
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    const btn = document.getElementById('copy-button');
-                    btn.textContent = '✅ Copied!';
-                    setTimeout(() => {
-                        btn.textContent = '📋 Copy';
-                    }, 2000);
-                });
-            }
-
             renderRows();
         </script>
     </body>
@@ -566,13 +588,12 @@ def render_card(results, card_title, subtitle_suffix=""):
     components.html(card_html, height=card_height, scrolling=False)
 
 
-# Controls & Layout
-top_col1, top_col2 = st.columns([2, 8])
+# Fetch Data First
+with st.spinner("Fetching latest Spond response data..."):
+    all_data = load_all_spond_data()
 
-with top_col1:
-    if st.button("🔄 Refresh Data"):
-        st.cache_data.clear()
-        st.rerun()
+# Controls & Layout
+top_col1, top_col2 = st.columns([2.5, 7.5])
 
 with top_col2:
     view_choice = st.segmented_control(
@@ -584,9 +605,6 @@ with top_col2:
     if not view_choice:
         view_choice = "All Teams"
 
-with st.spinner("Fetching latest Spond response data..."):
-    all_data = load_all_spond_data()
-
 if all_data:
     if view_choice == "Minis (U6–U12)":
         filtered_data = [d for d in all_data if d["category"] == "minis"]
@@ -597,6 +615,12 @@ if all_data:
     else:
         filtered_data = all_data
         suffix = "All Teams"
+
+    with top_col1:
+        if st.button("🔄 Refresh Data", use_container_width=True):
+            st.cache_data.clear()
+            st.rerun()
+        render_copy_button(filtered_data)
 
     title_text = get_signature_title(all_data, view_choice)
     render_card(filtered_data, card_title=title_text, subtitle_suffix=suffix)
