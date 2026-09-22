@@ -15,20 +15,20 @@ LOGO_IMAGE_PATH = Path("HRFC_CREST.png")
 SPOND_LOGO_PATH = Path("SPOND_LOGO.png")
 
 TARGET_SPECS = [
-    {"label": "HRFC U6", "group_name": "HRFC U6", "category": "minis", "lead": "MATT"},
+    {"label": "HRFC U6", "group_name": "HRFC U6", "category": "minis", "lead": "ELIZABETH"},
     {"label": "HRFC U7", "group_name": "HRFC U7", "category": "minis", "lead": "NICK"},
     {"label": "HRFC U8", "group_name": "HRFC U8", "category": "minis", "lead": "SARAH"},
     {"label": "HRFC U9", "group_name": "HRFC U9", "category": "minis", "lead": "DEBBIE"},
-    {"label": "HRFC U10", "group_name": "HRFC U10", "category": "minis", "lead": "STEVE"},
+    {"label": "HRFC U10", "group_name": "HRFC U10", "category": "minis", "lead": "SIAN"},
     {"label": "HRFC U11", "group_name": "HRFC U11", "category": "minis", "lead": "JEN"},
     {"label": "HRFC U12", "group_name": "HRFC U12", "category": "minis", "lead": "HARRY"},
     {"label": "HRFC U13", "group_name": "HRFC U13", "category": "juniors_youth", "lead": "COXY"},
     {"label": "HRFC U14", "group_name": "HRFC U14", "category": "juniors_youth", "lead": "JONNY"},
-    {"label": "HRFC HURRICANES", "group_name": "HRFC HURRICANES", "category": "juniors_youth", "lead": "HELEN"},
+    {"label": "HRFC HURRICANES", "group_name": "HRFC HURRICANES", "category": "juniors_youth", "lead": "HELEN H"},
     {"label": "HRFC COLTS", "group_name": "HRFC COLTS", "category": "juniors_youth", "lead": "MARK"},
-    {"label": "WARRIORS U12", "group_name": "WARRIORS U12", "category": "juniors_youth", "lead": "HELEN"},
+    {"label": "WARRIORS U12", "group_name": "WARRIORS U12", "category": "juniors_youth", "lead": "HELEN D"},
     {"label": "WARRIORS U14", "group_name": "WARRIORS U14", "category": "juniors_youth", "lead": "JO"},
-    {"label": "WARRIORS U16", "group_name": "WARRIORS U16", "category": "juniors_youth", "lead": "HELEN"},
+    {"label": "WARRIORS U16", "group_name": "WARRIORS U16", "category": "juniors_youth", "lead": "HELEN D"},
 ]
 
 CUSTOM_TEAM_ORDER = {spec["label"]: idx for idx, spec in enumerate(TARGET_SPECS)}
