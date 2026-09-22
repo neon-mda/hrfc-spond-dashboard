@@ -1,6 +1,6 @@
 import asyncio
 import base64
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -13,6 +13,8 @@ from zoneinfo import ZoneInfo
 # Relative paths for Streamlit Cloud deployment
 LOGO_IMAGE_PATH = Path("HRFC_CREST.png")
 SPOND_LOGO_PATH = Path("SPOND_LOGO.png")
+
+st.error("TEST DEPLOYMENT CHECK: IF YOU SEE THIS, THIS FILE IS LIVE")
 
 TARGET_SPECS = [
     {"label": "HRFC U6", "group_name": "HRFC U6", "category": "minis", "lead": "ELIZABETH"},
@@ -55,8 +57,15 @@ def parse_utc_timestamp(val):
 def resolve_group(groups, name):
     norm = clean(name)
     for g in groups:
-        if clean(g.get("name")) == norm or norm in clean(g.get("name")):
+        g_clean = clean(g.get("name"))
+        if norm == g_clean or norm in g_clean or g_clean in norm:
             return g
+    match = re.search(r'u\d+', norm)
+    if match:
+        target_u = match.group(0)
+        for g in groups:
+            if target_u in clean(g.get("name")):
+                return g
     return None
 
 
@@ -227,9 +236,22 @@ def load_all_spond_data():
 
 def get_signature_title(all_data, view_choice):
     uk_tz = ZoneInfo("Europe/London")
-    
-    events_by_label = {d["label"]: d["event_time"].astimezone(uk_tz) for d in all_data if d.get("event_time")}
+    uk_now = datetime.now(uk_tz)
+    weekday = uk_now.weekday()  # Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
 
+    # Juniors rule: Mon-Wed -> next Wednesday; Thu-Sun -> next Sunday
+    if weekday <= 2:
+        days_until_wed = (2 - weekday) % 7
+        if days_until_wed == 0 and uk_now.hour >= 21:
+            days_until_wed = 7
+        juniors_target_date = uk_now + timedelta(days=days_until_wed)
+    else:
+        days_until_sun = (6 - weekday) % 7
+        if days_until_sun == 0 and uk_now.hour >= 21:
+            days_until_sun = 7
+        juniors_target_date = uk_now + timedelta(days=days_until_sun)
+
+    events_by_label = {d["label"]: d["event_time"].astimezone(uk_tz) for d in all_data if d.get("event_time")}
     minis_dt = events_by_label.get("HRFC U7")
     if not minis_dt:
         for lbl in ["HRFC U8", "HRFC U9", "HRFC U10", "HRFC U6", "HRFC U11", "HRFC U12"]:
@@ -237,20 +259,13 @@ def get_signature_title(all_data, view_choice):
                 minis_dt = events_by_label[lbl]
                 break
 
-    juniors_dt = events_by_label.get("HRFC U14") or events_by_label.get("HRFC COLTS")
-    if not juniors_dt:
-        for lbl in ["HRFC U13", "HRFC HURRICANES", "WARRIORS U14", "WARRIORS U16", "WARRIORS U12"]:
-            if lbl in events_by_label:
-                juniors_dt = events_by_label[lbl]
-                break
-
     minis_str = minis_dt.strftime("%a %d %b").upper() if minis_dt else None
-    juniors_str = juniors_dt.strftime("%a %d %b").upper() if juniors_dt else None
+    juniors_str = juniors_target_date.strftime("%a %d %b").upper()
 
     if view_choice == "Minis (U6–U12)":
         return f"{minis_str or 'UPCOMING'} - HRFC TEAM SPOND RESPONSE RATES"
     elif view_choice == "Juniors (U13+ & Warriors)":
-        return f"{juniors_str or 'UPCOMING'} - HRFC TEAM SPOND RESPONSE RATES"
+        return f"{juniors_str} - HRFC TEAM SPOND RESPONSE RATES"
     else:
         if juniors_str and minis_str and juniors_str != minis_str:
             return f"{juniors_str} & {minis_str} - HRFC TEAM SPOND RESPONSE RATES"
