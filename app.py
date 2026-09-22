@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 LOGO_IMAGE_PATH = Path("HRFC_CREST.png")
 SPOND_LOGO_PATH = Path("SPOND_LOGO.png")
 
-st.error("TEST DEPLOYMENT CHECK: IF YOU SEE THIS, THIS FILE IS LIVE")
+#st.error("TEST DEPLOYMENT CHECK: IF YOU SEE THIS, THIS FILE IS LIVE")
 
 TARGET_SPECS = [
     {"label": "HRFC U6", "group_name": "HRFC U6", "category": "minis", "lead": "ELIZABETH"},
